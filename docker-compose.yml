@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: archai-postgres
+    environment:
+      POSTGRES_DB: archai
+      POSTGRES_USER: archai
+      POSTGRES_PASSWORD: archai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: archai-backend
+    environment:
+      ARCHAI_DATABASE_URL: postgresql+psycopg://archai:archai@postgres:5432/archai
+      ARCHAI_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000
+      ARCHAI_OLLAMA_BASE_URL: http://host.docker.internal:11434
+      ARCHAI_OLLAMA_MODEL: qwen3:8b
+      ARCHAI_OLLAMA_ENABLED: "true"
+    depends_on:
+      - postgres
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: archai-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+

@@ -1,0 +1,177 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --bg: #f6efe5;
+  --bg-accent: rgba(184, 131, 78, 0.18);
+  --surface: rgba(255, 248, 240, 0.78);
+  --surface-strong: rgba(255, 252, 247, 0.92);
+  --card-border: rgba(82, 56, 29, 0.12);
+  --text: #19120d;
+  --text-muted: #695d50;
+  --brand: #bb7d45;
+  --brand-strong: #73441d;
+  --brand-soft: rgba(187, 125, 69, 0.14);
+  --success: #2e7c64;
+  --danger: #bb4e4e;
+}
+
+.dark {
+  color-scheme: dark;
+  --bg: #08111b;
+  --bg-accent: rgba(218, 161, 101, 0.12);
+  --surface: rgba(11, 22, 34, 0.82);
+  --surface-strong: rgba(13, 26, 40, 0.94);
+  --card-border: rgba(214, 179, 142, 0.12);
+  --text: #f7f0e7;
+  --text-muted: #aea394;
+  --brand: #e0aa72;
+  --brand-strong: #f1c898;
+  --brand-soft: rgba(224, 170, 114, 0.14);
+  --success: #63c4a4;
+  --danger: #ef8f8f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: 'Manrope', sans-serif;
+  background:
+    radial-gradient(circle at 12% 10%, var(--bg-accent), transparent 30rem),
+    radial-gradient(circle at 88% 18%, rgba(118, 83, 47, 0.12), transparent 24rem),
+    radial-gradient(circle at 84% 82%, rgba(56, 106, 167, 0.12), transparent 26rem),
+    var(--bg);
+  color: var(--text);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: 'Cormorant Garamond', serif;
+    letter-spacing: -0.03em;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply rounded-[1.75rem] border p-5 shadow-soft backdrop-blur-xl;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0)),
+      var(--surface);
+    border-color: var(--card-border);
+  }
+
+  .panel-strong {
+    @apply rounded-[1.85rem] border p-6 shadow-soft backdrop-blur-xl;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0)),
+      var(--surface-strong);
+    border-color: var(--card-border);
+  }
+
+  .section-title {
+    @apply text-[2.15rem] font-semibold leading-none tracking-tight;
+  }
+
+  .text-muted {
+    color: var(--text-muted);
+  }
+
+  .pill {
+    @apply inline-flex items-center rounded-full border px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.28em];
+    background: linear-gradient(135deg, var(--brand-soft), rgba(255, 255, 255, 0.04));
+    border-color: color-mix(in srgb, var(--brand) 24%, transparent);
+    color: var(--brand-strong);
+  }
+
+  .grid-fade {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 3rem 3rem;
+  }
+
+  .input-shell {
+    @apply w-full rounded-[1.35rem] border px-4 py-3 outline-none transition;
+    background: rgba(255, 255, 255, 0.46);
+    border-color: var(--card-border);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  .dark .input-shell {
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .input-shell:focus {
+    border-color: color-mix(in srgb, var(--brand) 82%, white 18%);
+    box-shadow:
+      0 0 0 4px color-mix(in srgb, var(--brand) 14%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  }
+
+  .button-brand {
+    @apply inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold text-white transition;
+    background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+    box-shadow: 0 16px 34px color-mix(in srgb, var(--brand) 28%, transparent);
+  }
+
+  .button-brand:hover {
+    transform: translateY(-1px);
+  }
+
+  .button-secondary {
+    @apply inline-flex items-center justify-center rounded-full border px-5 py-3 text-sm font-semibold transition;
+    background: color-mix(in srgb, var(--surface-strong) 86%, transparent);
+    border-color: var(--card-border);
+  }
+
+  .button-secondary:hover {
+    transform: translateY(-1px);
+  }
+
+  .button-secondary:disabled,
+  .button-brand:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    transform: none;
+  }
+
+  .diagram-canvas svg {
+    width: 100%;
+    height: auto;
+  }
+}

@@ -1,0 +1,298 @@
+from app.models.workspace import Workspace
+from app.repositories.workspace_repository import WorkspaceRepository
+from app.schemas.domain import (
+    ApiDesign,
+    ArchitectureOption,
+    ClarificationPlan,
+    ComparisonResult,
+    DatabaseDesign,
+    DeploymentPlan,
+    DiagramArtifact,
+    ImpactAssessment,
+    RecommendationResult,
+    RequirementModel,
+    WorkspaceCreateRequest,
+    WorkspaceResponse,
+)
+from app.services.api_generator import ApiGenerator
+from app.services.architecture_generator import ArchitectureGenerator
+from app.services.clarification_engine import ClarificationEngine
+from app.services.comparison_engine import ComparisonEngine
+from app.services.database_generator import DatabaseGenerator
+from app.services.deployment_generator import DeploymentGenerator
+from app.services.diagram_generator import DiagramGenerator
+from app.services.documentation_generator import DocumentationGenerator
+from app.services.impact_analyzer import ImpactAnalyzer
+from app.services.recommendation_engine import RecommendationEngine
+from app.services.requirement_analyzer import RequirementAnalyzer
+
+
+class WorkspaceOrchestrator:
+    def __init__(self, repository: WorkspaceRepository) -> None:
+        self.repository = repository
+        self.requirement_analyzer = RequirementAnalyzer()
+        self.clarification_engine = ClarificationEngine()
+        self.architecture_generator = ArchitectureGenerator()
+        self.comparison_engine = ComparisonEngine()
+        self.recommendation_engine = RecommendationEngine()
+        self.database_generator = DatabaseGenerator()
+        self.api_generator = ApiGenerator()
+        self.deployment_generator = DeploymentGenerator()
+        self.diagram_generator = DiagramGenerator()
+        self.documentation_generator = DocumentationGenerator()
+        self.impact_analyzer = ImpactAnalyzer()
+
+    def list_workspaces(self) -> list[WorkspaceResponse]:
+        return [self._to_response(workspace) for workspace in self.repository.list()]
+
+    def get_workspace(self, workspace_id: str) -> WorkspaceResponse | None:
+        workspace = self.repository.get(workspace_id)
+        if workspace is None:
+            return None
+        return self._to_response(workspace)
+
+    def create_workspace(self, payload: WorkspaceCreateRequest) -> WorkspaceResponse:
+        answers = self._seed_answers(payload)
+        requirements = self.requirement_analyzer.analyze(
+            title=payload.title,
+            description=payload.description,
+            business_context=payload.business_context,
+            answers=answers,
+            constraints=payload.constraints,
+        )
+        generated = self._generate_all(payload.title, payload.description, payload.business_context, answers, requirements)
+
+        workspace = Workspace(
+            title=payload.title,
+            original_prompt=payload.description,
+            business_context=payload.business_context,
+            answers_json=answers,
+            requirements_json=generated["requirements"].model_dump(),
+            clarification_json=generated["clarification"].model_dump(),
+            architectures_json=[item.model_dump() for item in generated["architectures"]],
+            comparison_json=generated["comparison"].model_dump(),
+            recommendation_json=generated["recommendation"].model_dump(),
+            diagrams_json={key: value.model_dump() for key, value in generated["diagrams"].items()},
+            database_design_json=generated["database_design"].model_dump(),
+            api_design_json=generated["api_design"].model_dump(),
+            deployment_plan_json=generated["deployment_plan"].model_dump(),
+            documentation_markdown=generated["documentation_markdown"],
+            impact_history_json=[],
+        )
+        return self._to_response(self.repository.add(workspace))
+
+    def answer_clarifications(
+        self, workspace_id: str, answers: dict[str, str]
+    ) -> WorkspaceResponse | None:
+        workspace = self.repository.get(workspace_id)
+        if workspace is None:
+            return None
+
+        merged_answers = {**(workspace.answers_json or {}), **answers}
+        requirements = self.requirement_analyzer.analyze(
+            title=workspace.title,
+            description=workspace.original_prompt,
+            business_context=workspace.business_context,
+            answers=merged_answers,
+        )
+        generated = self._generate_all(
+            workspace.title,
+            workspace.original_prompt,
+            workspace.business_context,
+            merged_answers,
+            requirements,
+        )
+
+        workspace.answers_json = merged_answers
+        self._apply_generated_content(workspace, generated)
+        return self._to_response(self.repository.save(workspace))
+
+    def apply_change_request(
+        self, workspace_id: str, change_request: str
+    ) -> WorkspaceResponse | None:
+        workspace = self.repository.get(workspace_id)
+        if workspace is None:
+            return None
+
+        impact = self.impact_analyzer.assess(change_request)
+        requirements = RequirementModel.model_validate(workspace.requirements_json)
+        updated_requirements = self.requirement_analyzer.append_change(requirements, change_request)
+
+        architectures = [
+            ArchitectureOption.model_validate(item) for item in workspace.architectures_json
+        ]
+        comparison = ComparisonResult.model_validate(workspace.comparison_json)
+        recommendation = RecommendationResult.model_validate(workspace.recommendation_json)
+        database_design = DatabaseDesign.model_validate(workspace.database_design_json)
+        api_design = ApiDesign.model_validate(workspace.api_design_json)
+        deployment_plan = DeploymentPlan.model_validate(workspace.deployment_plan_json)
+
+        if "architectures" in impact.impacted_modules:
+            architectures = self.architecture_generator.generate(updated_requirements, workspace.answers_json)
+        if "comparison" in impact.impacted_modules or "architectures" in impact.impacted_modules:
+            comparison = self.comparison_engine.compare(updated_requirements, architectures, workspace.answers_json)
+        if "recommendation" in impact.impacted_modules or "architectures" in impact.impacted_modules:
+            recommendation = self.recommendation_engine.recommend(updated_requirements, architectures, comparison)
+        if "database" in impact.impacted_modules:
+            database_design = self.database_generator.generate(updated_requirements)
+        if "api" in impact.impacted_modules:
+            api_design = self.api_generator.generate(updated_requirements, database_design)
+        if "deployment" in impact.impacted_modules:
+            deployment_plan = self.deployment_generator.generate(
+                updated_requirements, recommendation, workspace.answers_json
+            )
+
+        diagrams = workspace.diagrams_json
+        if "diagrams" in impact.impacted_modules:
+            diagram_models = self.diagram_generator.generate(
+                updated_requirements,
+                architectures,
+                recommendation,
+                database_design,
+                deployment_plan,
+            )
+            diagrams = {key: value.model_dump() for key, value in diagram_models.items()}
+
+        workspace.requirements_json = updated_requirements.model_dump()
+        workspace.architectures_json = [item.model_dump() for item in architectures]
+        workspace.comparison_json = comparison.model_dump()
+        workspace.recommendation_json = recommendation.model_dump()
+        workspace.database_design_json = database_design.model_dump()
+        workspace.api_design_json = api_design.model_dump()
+        workspace.deployment_plan_json = deployment_plan.model_dump()
+        workspace.diagrams_json = diagrams
+
+        response = self._workspace_response_from_parts(workspace)
+        workspace.documentation_markdown = self.documentation_generator.build_markdown(response)
+
+        history = list(workspace.impact_history_json or [])
+        history.append(impact.model_dump())
+        workspace.impact_history_json = history
+
+        return self._to_response(self.repository.save(workspace))
+
+    def export_pdf(self, workspace_id: str) -> bytes | None:
+        workspace = self.repository.get(workspace_id)
+        if workspace is None:
+            return None
+        return self.documentation_generator.render_pdf(
+            workspace.title,
+            workspace.documentation_markdown,
+        )
+
+    def _generate_all(
+        self,
+        title: str,
+        description: str,
+        business_context: str | None,
+        answers: dict[str, str],
+        requirements: RequirementModel,
+    ) -> dict:
+        clarification = self.clarification_engine.generate(requirements, answers)
+        architectures = self.architecture_generator.generate(requirements, answers)
+        comparison = self.comparison_engine.compare(requirements, architectures, answers)
+        recommendation = self.recommendation_engine.recommend(requirements, architectures, comparison)
+        database_design = self.database_generator.generate(requirements)
+        api_design = self.api_generator.generate(requirements, database_design)
+        deployment_plan = self.deployment_generator.generate(requirements, recommendation, answers)
+        diagrams = self.diagram_generator.generate(
+            requirements,
+            architectures,
+            recommendation,
+            database_design,
+            deployment_plan,
+        )
+
+        response = WorkspaceResponse(
+            id="preview",
+            title=title,
+            original_prompt=description,
+            business_context=business_context,
+            answers=answers,
+            requirements=requirements,
+            clarification_plan=clarification,
+            architectures=architectures,
+            comparison=comparison,
+            recommendation=recommendation,
+            diagrams=diagrams,
+            database_design=database_design,
+            api_design=api_design,
+            deployment_plan=deployment_plan,
+            documentation_markdown="",
+            impact_history=[],
+            created_at=self._placeholder_datetime(),
+            updated_at=self._placeholder_datetime(),
+        )
+        documentation_markdown = self.documentation_generator.build_markdown(response)
+        return {
+            "requirements": requirements,
+            "clarification": clarification,
+            "architectures": architectures,
+            "comparison": comparison,
+            "recommendation": recommendation,
+            "database_design": database_design,
+            "api_design": api_design,
+            "deployment_plan": deployment_plan,
+            "diagrams": diagrams,
+            "documentation_markdown": documentation_markdown,
+        }
+
+    def _apply_generated_content(self, workspace: Workspace, generated: dict) -> None:
+        workspace.requirements_json = generated["requirements"].model_dump()
+        workspace.clarification_json = generated["clarification"].model_dump()
+        workspace.architectures_json = [item.model_dump() for item in generated["architectures"]]
+        workspace.comparison_json = generated["comparison"].model_dump()
+        workspace.recommendation_json = generated["recommendation"].model_dump()
+        workspace.diagrams_json = {key: value.model_dump() for key, value in generated["diagrams"].items()}
+        workspace.database_design_json = generated["database_design"].model_dump()
+        workspace.api_design_json = generated["api_design"].model_dump()
+        workspace.deployment_plan_json = generated["deployment_plan"].model_dump()
+        workspace.documentation_markdown = generated["documentation_markdown"]
+
+    def _workspace_response_from_parts(self, workspace: Workspace) -> WorkspaceResponse:
+        return WorkspaceResponse(
+            id=workspace.id,
+            title=workspace.title,
+            original_prompt=workspace.original_prompt,
+            business_context=workspace.business_context,
+            answers=workspace.answers_json or {},
+            requirements=RequirementModel.model_validate(workspace.requirements_json),
+            clarification_plan=ClarificationPlan.model_validate(workspace.clarification_json),
+            architectures=[ArchitectureOption.model_validate(item) for item in workspace.architectures_json],
+            comparison=ComparisonResult.model_validate(workspace.comparison_json),
+            recommendation=RecommendationResult.model_validate(workspace.recommendation_json),
+            diagrams={
+                key: DiagramArtifact.model_validate(value)
+                for key, value in (workspace.diagrams_json or {}).items()
+            },
+            database_design=DatabaseDesign.model_validate(workspace.database_design_json),
+            api_design=ApiDesign.model_validate(workspace.api_design_json),
+            deployment_plan=DeploymentPlan.model_validate(workspace.deployment_plan_json),
+            documentation_markdown=workspace.documentation_markdown,
+            impact_history=[
+                ImpactAssessment.model_validate(item) for item in (workspace.impact_history_json or [])
+            ],
+            created_at=workspace.created_at,
+            updated_at=workspace.updated_at,
+        )
+
+    def _to_response(self, workspace: Workspace) -> WorkspaceResponse:
+        response = self._workspace_response_from_parts(workspace)
+        if not response.documentation_markdown:
+            response.documentation_markdown = self.documentation_generator.build_markdown(response)
+        return response
+
+    def _seed_answers(self, payload: WorkspaceCreateRequest) -> dict[str, str]:
+        answers: dict[str, str] = {}
+        if payload.budget:
+            answers["budget"] = payload.budget
+        if payload.preferred_cloud:
+            answers["preferred_cloud"] = payload.preferred_cloud
+        if payload.constraints:
+            answers["constraints"] = "; ".join(payload.constraints)
+        return answers
+
+    def _placeholder_datetime(self):
+        from datetime import datetime, timezone
+
+        return datetime.now(timezone.utc)

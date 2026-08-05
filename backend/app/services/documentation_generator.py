@@ -1,0 +1,114 @@
+from io import BytesIO
+from xml.sax.saxutils import escape
+
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import Paragraph, Preformatted, SimpleDocTemplate, Spacer
+
+from app.schemas.domain import WorkspaceResponse
+
+
+class DocumentationGenerator:
+    def build_markdown(self, workspace: WorkspaceResponse) -> str:
+        architecture_lines: list[str] = []
+        for architecture in workspace.architectures:
+            architecture_lines.extend(
+                [
+                    f"### {architecture.name}",
+                    architecture.overview,
+                    "",
+                    "**Advantages**",
+                    *[f"- {item}" for item in architecture.advantages],
+                    "",
+                    "**Disadvantages**",
+                    *[f"- {item}" for item in architecture.disadvantages],
+                    "",
+                ]
+            )
+
+        diagrams = "\n".join(
+            f"- {key}: {artifact.title}" for key, artifact in workspace.diagrams.items()
+        )
+        api_groups = "\n".join(
+            f"- {group.name}: {len(group.endpoints)} endpoints"
+            for group in workspace.api_design.groups
+        )
+
+        return "\n".join(
+            [
+                f"# {workspace.title}",
+                "",
+                "## Executive Summary",
+                workspace.recommendation.decision_summary,
+                "",
+                "## Requirements",
+                workspace.requirements.summary,
+                "",
+                "### Functional Requirements",
+                *[f"- {item}" for item in workspace.requirements.functional_requirements],
+                "",
+                "### Non-Functional Requirements",
+                *[f"- {item}" for item in workspace.requirements.non_functional_requirements],
+                "",
+                "## Clarification Snapshot",
+                f"Completeness score: {workspace.clarification_plan.completeness_score}%",
+                "",
+                "## Architecture Alternatives",
+                *architecture_lines,
+                "## Recommendation",
+                *[f"- {item}" for item in workspace.recommendation.why],
+                "",
+                "## Database Design",
+                *[
+                    f"- {entity.name}: {entity.description}"
+                    for entity in workspace.database_design.entities
+                ],
+                "",
+                "## API Design",
+                api_groups,
+                "",
+                "## Deployment Plan",
+                *[f"- {item}" for item in workspace.deployment_plan.target_stack],
+                "",
+                "## Diagrams",
+                diagrams,
+                "",
+                "## Future Scope",
+                "- Add richer LLM-assisted scoring explanations with guardrail validation.",
+                "- Introduce collaboration, version history, and architecture approval workflows.",
+                "- Expand export support to DOCX and presentation-ready executive decks.",
+            ]
+        )
+
+    def render_pdf(self, title: str, markdown: str) -> bytes:
+        buffer = BytesIO()
+        document = SimpleDocTemplate(buffer, pagesize=A4)
+        styles = getSampleStyleSheet()
+        heading_style = styles["Heading2"]
+        body_style = styles["BodyText"]
+        code_style = ParagraphStyle("Code", parent=styles["Code"], leading=12)
+
+        story = [Paragraph(escape(title), styles["Title"]), Spacer(1, 12)]
+
+        for raw_line in markdown.splitlines():
+            line = raw_line.rstrip()
+            if not line:
+                story.append(Spacer(1, 6))
+                continue
+            if line.startswith("# "):
+                story.append(Paragraph(escape(line[2:]), styles["Title"]))
+            elif line.startswith("## "):
+                story.append(Paragraph(escape(line[3:]), heading_style))
+            elif line.startswith("### "):
+                story.append(Paragraph(escape(line[4:]), styles["Heading3"]))
+            elif line.startswith("- "):
+                story.append(Paragraph(escape(f"* {line[2:]}"), body_style))
+            elif line.startswith("**") and line.endswith("**"):
+                story.append(Paragraph(escape(line.strip("*")), styles["Heading4"]))
+            elif line.startswith("```"):
+                story.append(Preformatted(line, code_style))
+            else:
+                story.append(Paragraph(escape(line), body_style))
+
+        document.build(story)
+        return buffer.getvalue()
