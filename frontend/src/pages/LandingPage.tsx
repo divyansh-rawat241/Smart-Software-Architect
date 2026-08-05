@@ -4,103 +4,80 @@ import { Link } from 'react-router-dom'
 const features = [
   {
     title: 'Requirement intelligence',
-    description:
-      'Extracts actors, constraints, functional requirements, assumptions, and follow-ups from a single brief.',
+    description: 'Extracts actors, constraints, functional requirements, and follow-ups from a single brief.',
     icon: Cpu,
   },
   {
     title: 'Architecture alternatives',
-    description:
-      'Builds architecture options and compares them with transparent weighted scoring.',
+    description: 'Builds architecture options and compares them with transparent weighted scoring.',
     icon: Workflow,
   },
   {
     title: 'Polished deliverables',
-    description:
-      'Generates diagrams, APIs, schema design, rollout guidance, markdown exports, and PDF reports.',
+    description: 'Generates diagrams, APIs, schema design, and exports that stay aligned as the workspace evolves.',
     icon: Rocket,
   },
 ]
 
 export function LandingPage() {
   return (
-    <div className="space-y-6">
-      <section className="panel-strong relative overflow-hidden">
-        <div className="absolute -right-14 -top-10 h-52 w-52 rounded-full bg-[var(--brand-soft)] blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 h-32 w-32 rounded-full bg-white/10 blur-3xl dark:bg-white/5" />
-        <div className="grid gap-8 lg:grid-cols-[1.45fr,0.95fr]">
-          <div className="space-y-5">
-            <p className="pill">Architecture direction, refined</p>
-            <h2 className="max-w-3xl text-5xl font-semibold leading-[0.92] md:text-6xl">
-              Move from a rough idea to a boardroom-ready system blueprint.
+    <div className="space-y-4">
+      <div className="panel">
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-4">
+            <span className="pill">Architecture direction, refined</span>
+            <h2 className="text-3xl font-bold leading-tight">
+              Move from a rough idea to a system blueprint.
             </h2>
-            <p className="max-w-2xl text-lg text-muted">
-              ArchAI turns one project brief into requirements, architecture, diagrams, and exports that stay aligned as the workspace evolves.
+            <p className="text-base" style={{ color: 'var(--text-muted)' }}>
+              ArchAI turns one project brief into requirements, architecture, diagrams, and exports.
             </p>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                to="/dashboard"
-                className="button-brand"
-              >
+            <div className="flex gap-3">
+              <Link to="/dashboard" className="button-brand">
                 <span className="inline-flex items-center gap-2">
-                  Start on dashboard <ArrowRight className="size-4" />
+                  Get started <ArrowRight className="h-4 w-4" />
                 </span>
               </Link>
-              <Link
-                to="/dashboard"
-                className="button-secondary"
-              >
-                Review workspaces
+              <Link to="/dashboard" className="button-secondary">
+                View workspaces
               </Link>
             </div>
           </div>
 
-          <div className="panel grid gap-4">
-            <div className="rounded-3xl bg-[var(--brand-soft)] p-5">
-              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--brand-strong)]">
-                Decision canvas
-              </p>
-              <p className="mt-3 text-3xl font-semibold">Three architecture directions</p>
-              <p className="mt-2 text-sm text-muted">
-                Compare monolith, distributed, and managed-service trade-offs side by side.
+          <div className="space-y-3">
+            <div className="rounded-lg border p-4" style={{ borderColor: 'var(--card-border)', background: 'var(--brand-soft)' }}>
+              <div className="text-sm font-medium" style={{ color: 'var(--brand-strong)' }}>Decision canvas</div>
+              <p className="mt-1 font-semibold">Three architecture directions</p>
+              <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
+                Compare monolith, distributed, and managed-service trade-offs.
               </p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-3xl border border-[var(--card-border)] p-5">
-                <Database className="size-6 text-brand" />
-                <p className="mt-3 font-semibold">Schema clarity</p>
-                <p className="mt-2 text-sm text-muted">
-                  Entities, relationships, indexes, and normalization notes in one place.
-                </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg border p-3" style={{ borderColor: 'var(--card-border)' }}>
+                <Database className="h-5 w-5" style={{ color: 'var(--brand)' }} />
+                <p className="mt-2 text-sm font-medium">Schema clarity</p>
               </div>
-              <div className="rounded-3xl border border-[var(--card-border)] p-5">
-                <Workflow className="size-6 text-brand" />
-                <p className="mt-3 font-semibold">Incremental evolution</p>
-                <p className="mt-2 text-sm text-muted">
-                  Refresh only the artifacts touched by a scope change.
-                </p>
+              <div className="rounded-lg border p-3" style={{ borderColor: 'var(--card-border)' }}>
+                <Workflow className="h-5 w-5" style={{ color: 'var(--brand)' }} />
+                <p className="mt-2 text-sm font-medium">Incremental evolution</p>
               </div>
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
-      <section className="grid gap-4 lg:grid-cols-3">
-        {features.map((feature, index) => {
+      <div className="grid gap-4 md:grid-cols-3">
+        {features.map((feature) => {
           const Icon = feature.icon
           return (
-            <article
-              key={feature.title}
-              className="panel animate-rise"
-              style={{ animationDelay: `${index * 120}ms` }}
-            >
-              <Icon className="size-6 text-brand" />
-              <h3 className="mt-4 text-xl font-semibold">{feature.title}</h3>
-              <p className="mt-3 text-sm text-muted">{feature.description}</p>
-            </article>
+            <div key={feature.title} className="panel">
+              <Icon className="h-5 w-5" style={{ color: 'var(--brand)' }} />
+              <h3 className="mt-2 font-semibold">{feature.title}</h3>
+              <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>{feature.description}</p>
+            </div>
           )
         })}
-      </section>
+      </div>
     </div>
   )
 }

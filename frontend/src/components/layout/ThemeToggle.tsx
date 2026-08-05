@@ -8,14 +8,14 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={toggleTheme}
-      className="button-secondary gap-2 px-4 py-2.5 shadow-soft"
+      className="button-secondary flex items-center gap-2 px-3 py-2 text-sm"
     >
       {theme === 'dark' ? (
-        <SunMedium className="size-4" />
+        <SunMedium className="h-4 w-4" />
       ) : (
-        <MoonStar className="size-4" />
+        <MoonStar className="h-4 w-4" />
       )}
-      {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+      {theme === 'dark' ? 'Light' : 'Dark'}
     </button>
   )
 }

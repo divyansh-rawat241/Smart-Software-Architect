@@ -39,50 +39,50 @@ class DiagramGenerator:
         if requirements.domain == "EV Charging Booking Platform":
             mermaid = "\n".join(
                 [
-                    "flowchart LR",
+                    "flowchart TD",
                     "    classDef actor fill:transparent,stroke:transparent,color:#7a5a3e,font-weight:bold;",
                     "    classDef usecase fill:#fff7ef,stroke:#af7743,color:#2d1d11,stroke-width:1.4px;",
                     "    classDef support fill:#f8e9d8,stroke:#c59764,color:#3f2a17,stroke-dasharray: 5 3;",
                     "    classDef external fill:#13263a,stroke:#4b6d8d,color:#f7f0e7;",
+                    "",
                     '    Driver["Driver"]:::actor',
                     '    Operator["Station Operator"]:::actor',
                     '    Admin["Platform Admin"]:::actor',
                     '    Gateway["Payment Gateway"]:::external',
-                    '    subgraph EV["EV CHARGING STATION BOOKING SYSTEM"]',
-                    "        direction LR",
-                    '        Login([Register<br/>and sign in]):::usecase',
-                    '        Dashboard([View booking<br/>dashboard]):::usecase',
-                    '        Browse([Browse charging<br/>stations]):::usecase',
-                    '        Availability([Check charger<br/>availability]):::usecase',
-                    '        Reserve([Reserve charging<br/>slot]):::usecase',
-                    '        Cancel([Cancel<br/>booking]):::usecase',
-                    '        History([View payment<br/>history]):::usecase',
-                    '        Session([Start and stop<br/>charging]):::usecase',
-                    '        ManageStations([Manage<br/>stations]):::usecase',
-                    '        ManageSlots([Manage charging<br/>slots]):::usecase',
-                    '        Reports([Review reports<br/>and analytics]):::usecase',
-                    '        Upcoming([Upcoming<br/>bookings]):::support',
-                    '        Recent([Recent<br/>bookings]):::support',
-                    '        Details([View station<br/>details]):::support',
-                    '        SelectSlot([Select station<br/>and slot]):::support',
-                    '        Payment([Make<br/>payment]):::support',
-                    '        Refund([Request<br/>refund]):::support',
-                    '        StationOps([Add, update, or<br/>deactivate station]):::support',
-                    '        SlotOps([Add, update, or<br/>deactivate slots]):::support',
-                    "    end",
-                    "    Driver --- Login",
-                    "    Driver --- Dashboard",
-                    "    Driver --- Browse",
-                    "    Driver --- Availability",
-                    "    Driver --- Reserve",
-                    "    Driver --- Cancel",
-                    "    Driver --- History",
-                    "    Driver --- Session",
-                    "    Operator --- ManageStations",
-                    "    Operator --- ManageSlots",
-                    "    Admin --- ManageStations",
-                    "    Admin --- ManageSlots",
-                    "    Admin --- Reports",
+                    "",
+                    '    Login([Register<br/>and sign in]):::usecase',
+                    '    Dashboard([View booking<br/>dashboard]):::usecase',
+                    '    Browse([Browse charging<br/>stations]):::usecase',
+                    '    Availability([Check charger<br/>availability]):::usecase',
+                    '    Reserve([Reserve charging<br/>slot]):::usecase',
+                    '    Cancel([Cancel<br/>booking]):::usecase',
+                    '    History([View payment<br/>history]):::usecase',
+                    '    Session([Start and stop<br/>charging]):::usecase',
+                    '    ManageStations([Manage<br/>stations]):::usecase',
+                    '    ManageSlots([Manage charging<br/>slots]):::usecase',
+                    '    Reports([Review reports<br/>and analytics]):::usecase',
+                    '    Upcoming([Upcoming<br/>bookings]):::support',
+                    '    Recent([Recent<br/>bookings]):::support',
+                    '    Details([View station<br/>details]):::support',
+                    '    SelectSlot([Select station<br/>and slot]):::support',
+                    '    Payment([Make<br/>payment]):::support',
+                    '    Refund([Request<br/>refund]):::support',
+                    '    StationOps([Add, update, or<br/>deactivate station]):::support',
+                    '    SlotOps([Add, update, or<br/>deactivate slots]):::support',
+                    "",
+                    "    Driver --> Login",
+                    "    Driver --> Dashboard",
+                    "    Driver --> Browse",
+                    "    Driver --> Availability",
+                    "    Driver --> Reserve",
+                    "    Driver --> Cancel",
+                    "    Driver --> History",
+                    "    Driver --> Session",
+                    "    Operator --> ManageStations",
+                    "    Operator --> ManageSlots",
+                    "    Admin --> ManageStations",
+                    "    Admin --> ManageSlots",
+                    "    Admin --> Reports",
                     "    Dashboard -. includes .-> Upcoming",
                     "    Dashboard -. includes .-> Recent",
                     "    Browse -. includes .-> Details",
@@ -92,8 +92,8 @@ class DiagramGenerator:
                     "    Cancel -. extends .-> Refund",
                     "    ManageStations -. includes .-> StationOps",
                     "    ManageSlots -. includes .-> SlotOps",
-                    "    Gateway --- Payment",
-                    "    Gateway --- Refund",
+                    "    Gateway --> Payment",
+                    "    Gateway --> Refund",
                 ]
             )
             plantuml = "\n".join(
@@ -162,55 +162,55 @@ class DiagramGenerator:
         if requirements.domain == "Online Pharmacy":
             mermaid = "\n".join(
                 [
-                    "flowchart LR",
+                    "flowchart TD",
                     "    classDef actor fill:transparent,stroke:transparent,color:#7a5a3e,font-weight:bold;",
                     "    classDef usecase fill:#fff7ef,stroke:#af7743,color:#2d1d11,stroke-width:1.4px;",
                     "    classDef support fill:#f8e9d8,stroke:#c59764,color:#3f2a17,stroke-dasharray: 5 3;",
                     "    classDef external fill:#13263a,stroke:#4b6d8d,color:#f7f0e7;",
+                    "",
                     '    Customer["Customer"]:::actor',
                     '    Pharmacist["Pharmacist"]:::actor',
                     '    Courier["Delivery Partner"]:::actor',
                     '    Admin["Operations Admin"]:::actor',
                     '    Gateway["Payment Gateway"]:::external',
-                    '    subgraph PHARMACY["ONLINE PHARMACY SYSTEM"]',
-                    "        direction LR",
-                    '        Login([Register<br/>and sign in]):::usecase',
-                    '        Browse([Search medicine<br/>catalog]):::usecase',
-                    '        PlaceOrder([Place<br/>order]):::usecase',
-                    '        RxOrder([Place prescription<br/>order]):::usecase',
-                    '        Track([Track order<br/>status]):::usecase',
-                    '        History([Review order<br/>history]):::usecase',
-                    '        Inventory([Manage inventory<br/>levels]):::usecase',
-                    '        Catalog([Manage catalog<br/>and pricing]):::usecase',
-                    '        Substitute([Approve substitutions<br/>when needed]):::usecase',
-                    '        Dispatch([Prepare and dispatch<br/>order]):::usecase',
-                    '        Reports([Review operational<br/>dashboards]):::usecase',
-                    '        ViewDetails([View medicine<br/>details]):::support',
-                    '        UploadRx([Upload<br/>prescription]):::support',
-                    '        VerifyRx([Verify<br/>prescription]):::support',
-                    '        Payment([Process<br/>payment]):::support',
-                    '        DeliveryUpdate([Update delivery<br/>status]):::support',
-                    "    end",
-                    "    Customer --- Login",
-                    "    Customer --- Browse",
-                    "    Customer --- PlaceOrder",
-                    "    Customer --- RxOrder",
-                    "    Customer --- Track",
-                    "    Customer --- History",
-                    "    Pharmacist --- VerifyRx",
-                    "    Pharmacist --- Inventory",
-                    "    Pharmacist --- Substitute",
-                    "    Pharmacist --- Dispatch",
-                    "    Courier --- DeliveryUpdate",
-                    "    Admin --- Catalog",
-                    "    Admin --- Inventory",
-                    "    Admin --- Reports",
+                    "",
+                    '    Login([Register<br/>and sign in]):::usecase',
+                    '    Browse([Search medicine<br/>catalog]):::usecase',
+                    '    PlaceOrder([Place<br/>order]):::usecase',
+                    '    RxOrder([Place prescription<br/>order]):::usecase',
+                    '    Track([Track order<br/>status]):::usecase',
+                    '    History([Review order<br/>history]):::usecase',
+                    '    Inventory([Manage inventory<br/>levels]):::usecase',
+                    '    Catalog([Manage catalog<br/>and pricing]):::usecase',
+                    '    Substitute([Approve substitutions<br/>when needed]):::usecase',
+                    '    Dispatch([Prepare and dispatch<br/>order]):::usecase',
+                    '    Reports([Review operational<br/>dashboards]):::usecase',
+                    '    ViewDetails([View medicine<br/>details]):::support',
+                    '    UploadRx([Upload<br/>prescription]):::support',
+                    '    VerifyRx([Verify<br/>prescription]):::support',
+                    '    Payment([Process<br/>payment]):::support',
+                    '    DeliveryUpdate([Update delivery<br/>status]):::support',
+                    "",
+                    "    Customer --> Login",
+                    "    Customer --> Browse",
+                    "    Customer --> PlaceOrder",
+                    "    Customer --> RxOrder",
+                    "    Customer --> Track",
+                    "    Customer --> History",
+                    "    Pharmacist --> VerifyRx",
+                    "    Pharmacist --> Inventory",
+                    "    Pharmacist --> Substitute",
+                    "    Pharmacist --> Dispatch",
+                    "    Courier --> DeliveryUpdate",
+                    "    Admin --> Catalog",
+                    "    Admin --> Inventory",
+                    "    Admin --> Reports",
                     "    Browse -. includes .-> ViewDetails",
                     "    PlaceOrder -. includes .-> Payment",
                     "    RxOrder -. extends .-> PlaceOrder",
                     "    RxOrder -. includes .-> UploadRx",
                     "    RxOrder -. includes .-> VerifyRx",
-                    "    Gateway --- Payment",
+                    "    Gateway --> Payment",
                 ]
             )
             plantuml = "\n".join(
@@ -270,84 +270,90 @@ class DiagramGenerator:
                 plantuml=plantuml,
             )
 
-        primary_actor = requirements.actors[0].name if requirements.actors else "Primary User"
-        secondary_actor = (
-            requirements.actors[1].name if len(requirements.actors) > 1 else "Operations Lead"
-        )
-        support_actor = (
-            requirements.actors[2].name if len(requirements.actors) > 2 else "External Service"
-        )
-        primary_labels = [
-            self._use_case_label(requirement)
-            for requirement in requirements.functional_requirements[:5]
-        ]
-        support_labels = self._support_case_labels(primary_labels)
-        if not support_labels:
-            support_labels = ["Review details", "Confirm changes", "Export results"]
+        actors = requirements.actors or []
+        primary_actor = actors[0].name if len(actors) > 0 else "Primary User"
+        secondary_actor = actors[1].name if len(actors) > 1 else "Secondary User"
+        tertiary_actor = actors[2].name if len(actors) > 2 else "External Service"
+
+        raw_requirements = requirements.functional_requirements[:6]
+        primary_labels = [self._clean_use_case_label(r) for r in raw_requirements]
+        primary_labels = [l for l in primary_labels if l]
+
+        if len(primary_labels) < 3:
+            primary_labels = primary_labels + ["View dashboard", "Manage settings", "Generate report"][
+                : 3 - len(primary_labels)
+            ]
+
+        support_labels = self._derive_support_labels(primary_labels)
+
+        num_primary = min(len(primary_labels), 6)
+        num_support = min(len(support_labels), 3)
 
         mermaid_lines = [
-            "flowchart LR",
+            "flowchart TD",
             "    classDef actor fill:transparent,stroke:transparent,color:#7a5a3e,font-weight:bold;",
             "    classDef usecase fill:#fff7ef,stroke:#af7743,color:#2d1d11,stroke-width:1.4px;",
             "    classDef support fill:#f8e9d8,stroke:#c59764,color:#3f2a17,stroke-dasharray: 5 3;",
+            "",
             f'    Primary["{primary_actor}"]:::actor',
-            f'    Secondary["{secondary_actor}"]:::actor',
-            f'    Support["{support_actor}"]:::actor',
-            f'    subgraph SYSTEM["{requirements.domain.upper()}"]',
-            "        direction LR",
         ]
+        if num_primary > 3:
+            mermaid_lines.append(f'    Secondary["{secondary_actor}"]:::actor')
+        if num_support > 0:
+            mermaid_lines.append(f'    External["{tertiary_actor}"]:::actor')
 
-        for index, label in enumerate(primary_labels, start=1):
-            mermaid_lines.append(
-                f'        UC{index}([{self._wrap_label(label, 20, html=True)}]):::usecase'
-            )
-        for index, label in enumerate(support_labels[:4], start=1):
-            mermaid_lines.append(
-                f'        SC{index}([{self._wrap_label(label, 16, html=True)}]):::support'
-            )
-        mermaid_lines.append("    end")
+        mermaid_lines.append("")
 
-        for index in range(1, len(primary_labels) + 1):
-            mermaid_lines.append(f"    Primary --- UC{index}")
-        if primary_labels:
-            mermaid_lines.append(f"    Secondary --- UC{max(1, len(primary_labels) - 1)}")
-            mermaid_lines.append(f"    Secondary --- UC{len(primary_labels)}")
-        if support_labels:
-            mermaid_lines.append("    Support --- SC1")
-        for index in range(1, min(len(primary_labels), len(support_labels[:4])) + 1):
-            mermaid_lines.append(f"    UC{index} -. includes .-> SC{index}")
+        for i, label in enumerate(primary_labels[:num_primary], start=1):
+            mermaid_lines.append(
+                f'    UC{i}([{self._wrap_label(label, 18, html=True)}]):::usecase'
+            )
+        for i, label in enumerate(support_labels[:num_support], start=1):
+            mermaid_lines.append(
+                f'    SC{i}([{self._wrap_label(label, 14, html=True)}]):::support'
+            )
+
+        mermaid_lines.append("")
+
+        for i in range(1, num_primary + 1):
+            mermaid_lines.append(f"    Primary --> UC{i}")
+        if num_primary > 3:
+            mermaid_lines.append(f"    Secondary --> UC{num_primary}")
+            mermaid_lines.append(f"    Secondary --> UC{max(1, num_primary - 1)}")
+        for i in range(1, num_support + 1):
+            mermaid_lines.append(f"    External --> SC{i}")
+        for i in range(1, min(num_primary, num_support) + 1):
+            mermaid_lines.append(f"    UC{i} -. includes .-> SC{i}")
 
         plantuml_lines = [
             "@startuml",
             "left to right direction",
             f'actor "{primary_actor}" as Primary',
-            f'actor "{secondary_actor}" as Secondary',
-            f'actor "{support_actor}" as Support',
-            f'rectangle "{requirements.domain.upper()}" {{',
         ]
-        for index, label in enumerate(primary_labels, start=1):
-            plantuml_lines.append(
-                f'  usecase "{self._wrap_label(label, 18)}" as UC{index}'
-            )
-        for index, label in enumerate(support_labels[:4], start=1):
-            plantuml_lines.append(
-                f'  usecase "{self._wrap_label(label, 16)}" as SC{index}'
-            )
+        if num_primary > 3:
+            plantuml_lines.append(f'actor "{secondary_actor}" as Secondary')
+        if num_support > 0:
+            plantuml_lines.append(f'actor "{tertiary_actor}" as External')
+        plantuml_lines.append(f'rectangle "{requirements.domain.upper()}" {{')
+        for i, label in enumerate(primary_labels[:num_primary], start=1):
+            plantuml_lines.append(f'  usecase "{self._wrap_label(label, 18)}" as UC{i}')
+        for i, label in enumerate(support_labels[:num_support], start=1):
+            plantuml_lines.append(f'  usecase "{self._wrap_label(label, 14)}" as SC{i}')
         plantuml_lines.append("}")
-        for index in range(1, len(primary_labels) + 1):
-            plantuml_lines.append(f"Primary --> UC{index}")
-        if primary_labels:
-            plantuml_lines.append(f"Secondary --> UC{max(1, len(primary_labels) - 1)}")
-            plantuml_lines.append(f"Secondary --> UC{len(primary_labels)}")
-        if support_labels:
-            plantuml_lines.append("Support --> SC1")
-        for index in range(1, min(len(primary_labels), len(support_labels[:4])) + 1):
-            plantuml_lines.append(f"UC{index} .> SC{index} : <<include>>")
+        for i in range(1, num_primary + 1):
+            plantuml_lines.append(f"Primary --> UC{i}")
+        if num_primary > 3:
+            plantuml_lines.append(f"Secondary --> UC{num_primary}")
+            plantuml_lines.append(f"Secondary --> UC{max(1, num_primary - 1)}")
+        for i in range(1, num_support + 1):
+            plantuml_lines.append(f"External --> SC{i}")
+        for i in range(1, min(num_primary, num_support) + 1):
+            plantuml_lines.append(f"UC{i} .> SC{i} : <<include>>")
         plantuml_lines.append("@enduml")
 
         return DiagramArtifact(
             title="Use Case Diagram",
-            description="Captures the primary actor journeys, supporting interactions, and included flows inside the target platform boundary.",
+            description=f"Shows the primary actors and use cases for the {requirements.domain} system.",
             mermaid="\n".join(mermaid_lines),
             plantuml="\n".join(plantuml_lines),
         )
@@ -712,9 +718,10 @@ class DiagramGenerator:
         for entity in selected_entities:
             entity_blocks.append(f"    {diagram_names[entity.name]} {{")
             for field in entity.fields[:6]:
-                field_type = f"{field.data_type}{'?' if field.nullable else ''}"
+                field_type = re.sub(r"\(.*?\)", "", field.data_type)
+                nullable = "?" if field.nullable else ""
                 prefix = "*" if field.name == "id" else ""
-                entity_blocks.append(f"        {field_type} {prefix}{field.name}")
+                entity_blocks.append(f"        {field_type}{nullable} {prefix}{field.name}")
             entity_blocks.append("    }")
 
         relations = []
@@ -722,8 +729,9 @@ class DiagramGenerator:
             if relation.source not in selected_names or relation.target not in selected_names:
                 continue
             parent_left, child_right = self._er_cardinality(relation.relationship)
+            label = self._relationship_label(relation)
             relations.append(
-                f"    {diagram_names[relation.target]} {parent_left}--{child_right} {diagram_names[relation.source]} : {self._relationship_label(relation)}"
+                f'    {diagram_names[relation.target]} {parent_left}--{child_right} {diagram_names[relation.source]} : "{label}"'
             )
 
         plantuml_lines = ["@startuml", "!theme plain", "hide circle"]
@@ -860,41 +868,51 @@ class DiagramGenerator:
             plantuml=plantuml,
         )
 
-    def _use_case_label(self, requirement: str) -> str:
-        cleaned = requirement.rstrip(".")
+    def _clean_use_case_label(self, requirement: str) -> str:
+        cleaned = requirement.strip().rstrip(".")
         cleaned = re.sub(
-            r"^(support|allow|enable|provide|expose|deliver|keep)\s+",
+            r"^(the system (shall|must|should|will)|we (shall|must|should|will)|it (shall|must|should|will))\s+",
             "",
             cleaned,
             flags=re.IGNORECASE,
         )
-        cleaned = re.split(r"\s+with\s+", cleaned, maxsplit=1, flags=re.IGNORECASE)[0]
-        cleaned = cleaned.replace(" and ", " & ")
-        return cleaned[0].upper() + cleaned[1:] if cleaned else "Core use case"
+        cleaned = re.sub(
+            r"^(support|allow|enable|provide|expose|deliver|keep|implement|handle|process|ensure|maintain|manage|offer|give|make)\s+",
+            "",
+            cleaned,
+            flags=re.IGNORECASE,
+        )
+        cleaned = re.split(r"\s+(with|using|via|through|including|that|which)\s+", cleaned, maxsplit=1, flags=re.IGNORECASE)[0]
+        cleaned = cleaned.replace(" and ", " & ").replace("/", " / ")
+        if not cleaned:
+            return ""
+        return cleaned[0].upper() + cleaned[1:]
 
-    def _support_case_labels(self, labels: list[str]) -> list[str]:
+    def _derive_support_labels(self, primary_labels: list[str]) -> list[str]:
         supports: list[str] = []
-        for label in labels:
-            lower_label = label.lower()
-            if "search" in lower_label or "catalog" in lower_label:
-                supports.append("View item details")
-            if "station" in lower_label:
-                supports.append("View station details")
-            if "availability" in lower_label or "slot" in lower_label:
-                supports.append("Select station and slot")
-            if "payment" in lower_label or "checkout" in lower_label or "reserve" in lower_label:
-                supports.append("Process payment")
-            if "refund" in lower_label or "cancel" in lower_label or "history" in lower_label:
-                supports.append("Request refund")
-            if "manage" in lower_label:
-                supports.append("Update assets and availability")
-            if "notification" in lower_label:
-                supports.append("Send status alerts")
-        unique: list[str] = []
-        for label in supports:
-            if label not in unique:
-                unique.append(label)
-        return unique
+        seen: set[str] = set()
+        for label in primary_labels:
+            lower = label.lower()
+            candidates: list[str] = []
+            if any(kw in lower for kw in ("search", "browse", "find", "catalog", "list")):
+                candidates.append("View details")
+            if any(kw in lower for kw in ("create", "add", "register", "sign up", "new")):
+                candidates.append("Confirm entry")
+            if any(kw in lower for kw in ("pay", "checkout", "purchase", "billing", "invoice")):
+                candidates.append("Process payment")
+            if any(kw in lower for kw in ("cancel", "refund", "withdraw")):
+                candidates.append("Process refund")
+            if any(kw in lower for kw in ("report", "analytics", "dashboard", "stats")):
+                candidates.append("Export data")
+            if any(kw in lower for kw in ("upload", "import", "attach")):
+                candidates.append("Validate file")
+            if any(kw in lower for kw in ("track", "monitor", "status")):
+                candidates.append("View progress")
+            for c in candidates:
+                if c not in seen:
+                    seen.add(c)
+                    supports.append(c)
+        return supports[:3]
 
     def _entity_alias(self, entity_name: str) -> str:
         singular = entity_name
@@ -916,44 +934,46 @@ class DiagramGenerator:
         source = relation.source
         target = relation.target
         if source == "chargers" and target == "stations":
-            return "hosts"
+            return "belongs to"
         if source == "bookings" and target == "users":
-            return "places"
+            return "made by"
         if source == "bookings" and target == "stations":
-            return "receives"
+            return "at"
         if source == "bookings" and target == "chargers":
-            return "is reserved by"
+            return "uses"
         if source == "charging_sessions" and target == "bookings":
-            return "creates"
+            return "linked to"
         if source == "payments" and target == "bookings":
-            return "is settled by"
+            return "for"
         if source == "payments" and target == "users":
-            return "makes"
+            return "made by"
         if source == "inventory" and target == "products":
-            return "has stock record"
+            return "tracks"
         if source == "prescriptions" and target == "users":
-            return "uploads"
+            return "uploaded by"
         if source == "orders" and target == "users":
-            return "places"
+            return "placed by"
         if source == "orders" and target == "prescriptions":
-            return "authorizes"
+            return "linked to"
         if source == "payments" and target == "orders":
-            return "is settled by"
+            return "for"
         if source == "shipments" and target == "orders":
-            return "is fulfilled by"
+            return "fulfills"
         if source == "shipments" and target == "users":
-            return "handles"
+            return "delivered to"
         if source == "audit_logs":
-            return "generates"
+            return "tracks"
         if source == "prescriptions":
             return "references"
         if source == "order_items" and target == "orders":
-            return "contains"
+            return "in"
         if source == "order_items" and target == "products":
-            return "appears in"
+            return "contains"
         if source == "notifications":
-            return "receives"
-        return relation.relationship.replace("-", " ")
+            return "sends to"
+        source_clean = source.replace("_", " ").rstrip("s")
+        target_clean = target.replace("_", " ").rstrip("s")
+        return f"of {target_clean}"
 
     def _class_cardinality(self, relationship: str) -> tuple[str, str]:
         if relationship == "one-to-one":
@@ -1019,12 +1039,7 @@ class DiagramGenerator:
             ]
             limit = 7
         else:
-            priority_order = [
-                "users",
-                "workflows",
-                "notifications",
-                "audit_logs",
-            ]
+            priority_order = []
             limit = 6
         lookup = {entity.name: entity for entity in database_design.entities}
         selected: list[DatabaseEntity] = []

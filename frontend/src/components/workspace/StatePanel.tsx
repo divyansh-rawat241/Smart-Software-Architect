@@ -23,43 +23,40 @@ export function StatePanel({
   const isDanger = tone === 'danger'
 
   return (
-    <section className="panel-strong">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="max-w-2xl">
+    <div className="panel">
+      <div className="flex items-start justify-between">
+        <div className="max-w-lg">
           <span className="pill">{badge}</span>
-          <h2 className="mt-3 text-2xl font-semibold">{title}</h2>
-          <p className="mt-3 text-sm text-muted">{description}</p>
+          <h2 className="mt-2 text-lg font-semibold">{title}</h2>
+          <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>{description}</p>
         </div>
         {isDanger ? (
-          <div className="rounded-full bg-[rgba(182,66,66,0.12)] p-3 text-danger">
-            <AlertTriangle className="size-5" />
-          </div>
+          <AlertTriangle className="h-5 w-5 shrink-0" style={{ color: 'var(--danger)' }} />
         ) : null}
       </div>
 
       {actionLabel ? (
-        <div className="mt-5">
+        <div className="mt-3">
           {actionTo ? (
             <Link
               to={actionTo}
-              className="inline-flex items-center gap-2 rounded-full border border-[var(--card-border)] bg-[var(--surface-strong)] px-4 py-2 text-sm font-semibold"
+              className="button-secondary inline-flex items-center gap-1.5 text-sm"
             >
-              <RefreshCcw className="size-4" />
+              <RefreshCcw className="h-3.5 w-3.5" />
               {actionLabel}
             </Link>
           ) : (
             <button
               type="button"
               onClick={onAction}
-              className="inline-flex items-center gap-2 rounded-full border border-[var(--card-border)] bg-[var(--surface-strong)] px-4 py-2 text-sm font-semibold"
+              className="button-secondary inline-flex items-center gap-1.5 text-sm"
             >
-              <RefreshCcw className="size-4" />
+              <RefreshCcw className="h-3.5 w-3.5" />
               {actionLabel}
             </button>
           )}
         </div>
       ) : null}
-    </section>
+    </div>
   )
 }
-

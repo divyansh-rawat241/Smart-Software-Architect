@@ -13,7 +13,7 @@ interface RadarComparisonChartProps {
   comparison: ComparisonResult
 }
 
-const COLORS = ['#b55d25', '#2563eb', '#16a34a']
+const COLORS = ['#b45309', '#2563eb', '#16a34a']
 
 export function RadarComparisonChart({
   comparison,
@@ -35,16 +35,16 @@ export function RadarComparisonChart({
   })
 
   return (
-    <section className="panel h-full">
-      <p className="pill">Score visualization</p>
-      <h3 className="mt-3 text-xl font-semibold">Radar chart</h3>
-      <div className="mt-6 h-[360px]">
+    <div className="panel">
+      <span className="pill">Score visualization</span>
+      <h3 className="mt-2 font-semibold">Radar chart</h3>
+      <div className="mt-4 h-[320px]">
         <ResponsiveContainer>
           <RadarChart data={data}>
             <PolarGrid />
             <PolarAngleAxis
               dataKey="metric"
-              tick={{ fill: 'currentColor', fontSize: 12 }}
+              tick={{ fill: 'currentColor', fontSize: 11 }}
             />
             <Tooltip />
             {comparison.scorecards.map((scorecard, index) => (
@@ -54,13 +54,12 @@ export function RadarComparisonChart({
                 dataKey={scorecard.architecture_name}
                 stroke={COLORS[index % COLORS.length]}
                 fill={COLORS[index % COLORS.length]}
-                fillOpacity={0.16}
+                fillOpacity={0.15}
               />
             ))}
           </RadarChart>
         </ResponsiveContainer>
       </div>
-    </section>
+    </div>
   )
 }
-

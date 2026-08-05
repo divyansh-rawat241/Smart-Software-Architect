@@ -14,20 +14,14 @@ export function ComparisonPage() {
   )
 
   if (workspaceQuery.isLoading) {
-    return (
-      <StatePanel
-        badge="Loading"
-        title="Loading comparison"
-        description="Preparing the architecture scorecards."
-      />
-    )
+    return <StatePanel badge="Loading" title="Loading comparison" description="Preparing the scorecards." />
   }
 
   if (workspaceQuery.isError) {
     return (
       <StatePanel
         badge="Backend issue"
-        title="The comparison dashboard could not reach the backend"
+        title="Could not reach the backend"
         description={getErrorMessage(workspaceQuery.error)}
         tone="danger"
         actionLabel="Retry"
@@ -40,8 +34,8 @@ export function ComparisonPage() {
     return (
       <StatePanel
         badge="No workspace"
-        title="No comparison scorecard is available yet"
-        description="Create the project brief from the dashboard first."
+        title="No comparison available"
+        description="Create a project brief from the dashboard first."
         actionLabel="Open Dashboard"
         actionTo="/dashboard"
       />
@@ -49,21 +43,18 @@ export function ComparisonPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="grid gap-4 xl:grid-cols-[1fr,1fr]">
+    <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-2">
         <RadarComparisonChart comparison={workspace.comparison} />
         <div className="panel">
-          <p className="pill">Scoring rationale</p>
-          <h3 className="mt-3 text-xl font-semibold">
-            Why the scorecards look this way
-          </h3>
-          <ul className="mt-4 space-y-3 text-sm">
+          <span className="pill">Scoring rationale</span>
+          <ul className="mt-3 space-y-1.5 text-sm">
             {workspace.comparison.reasoning.map((reason) => (
-              <li key={reason}>- {reason}</li>
+              <li key={reason}>{reason}</li>
             ))}
           </ul>
         </div>
-      </section>
+      </div>
 
       <ComparisonTable comparison={workspace.comparison} />
     </div>

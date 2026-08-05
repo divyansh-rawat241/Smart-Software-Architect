@@ -6,13 +6,7 @@ import { useWorkspacesQuery } from '../hooks/useWorkspaces'
 import { getActiveWorkspace, getErrorMessage } from '../lib/utils'
 
 const diagramOrder = [
-  'use_case',
-  'activity',
-  'sequence',
-  'class',
-  'er',
-  'component',
-  'deployment',
+  'use_case', 'activity', 'sequence', 'class', 'er', 'component', 'deployment',
 ]
 
 const diagramLabels: Record<string, string> = {
@@ -42,30 +36,21 @@ export function DiagramsPage() {
   const [selectedKey, setSelectedKey] = useState('use_case')
 
   useEffect(() => {
-    if (!diagramKeys.length) {
-      return
-    }
-
+    if (!diagramKeys.length) return
     if (!diagramKeys.includes(selectedKey)) {
       setSelectedKey(diagramKeys[0])
     }
   }, [diagramKeys, selectedKey])
 
   if (workspaceQuery.isLoading) {
-    return (
-      <StatePanel
-        badge="Loading"
-        title="Loading diagrams"
-        description="Preparing the diagram suite."
-      />
-    )
+    return <StatePanel badge="Loading" title="Loading diagrams" description="Preparing the diagram suite." />
   }
 
   if (workspaceQuery.isError) {
     return (
       <StatePanel
         badge="Backend issue"
-        title="The diagrams page could not reach the backend"
+        title="Could not reach the backend"
         description={getErrorMessage(workspaceQuery.error)}
         tone="danger"
         actionLabel="Retry"
@@ -78,8 +63,8 @@ export function DiagramsPage() {
     return (
       <StatePanel
         badge="No workspace"
-        title="No diagram pack is available yet"
-        description="Create the project brief from the dashboard first."
+        title="No diagrams available"
+        description="Create a project brief from the dashboard first."
         actionLabel="Open Dashboard"
         actionTo="/dashboard"
       />
@@ -90,28 +75,28 @@ export function DiagramsPage() {
     workspace.diagrams[selectedKey] ?? workspace.diagrams[diagramKeys[0]]
 
   return (
-    <div className="space-y-6">
-      <section className="panel-strong flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="pill">Diagrams</p>
-          <h2 className="mt-3 text-3xl font-semibold">Diagram suite</h2>
+    <div className="space-y-4">
+      <div className="panel">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <span className="pill">Diagram suite</span>
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            {workspace.title} &middot; {diagramKeys.length} views
+          </span>
         </div>
-        <div className="rounded-full border border-[var(--card-border)] px-4 py-2 text-sm text-muted">
-          {workspace.title} • {diagramKeys.length} views
-        </div>
-      </section>
+      </div>
 
-      <div className="panel flex flex-wrap gap-2">
+      <div className="panel flex flex-wrap gap-1.5">
         {diagramKeys.map((diagramKey) => (
           <button
             key={diagramKey}
             type="button"
             onClick={() => setSelectedKey(diagramKey)}
-            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
               diagramKey === selectedKey
-                ? 'bg-brand text-white'
-                : 'border border-[var(--card-border)] bg-[var(--surface-strong)] hover:-translate-y-0.5'
+                ? 'bg-amber-600 text-white'
+                : 'border hover:bg-black/5 dark:hover:bg-white/5'
             }`}
+            style={{ borderColor: 'var(--card-border)' }}
           >
             {diagramLabels[diagramKey] ?? diagramKey.replaceAll('_', ' ')}
           </button>

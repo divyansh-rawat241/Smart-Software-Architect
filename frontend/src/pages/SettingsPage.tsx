@@ -18,81 +18,62 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[1fr,0.8fr]">
-      <form className="panel-strong" onSubmit={saveSettings}>
-        <p className="pill">Client configuration</p>
-        <h2 className="mt-3 text-2xl font-semibold">Frontend runtime settings</h2>
-        <label className="mt-6 block space-y-2">
-          <span className="text-sm font-semibold">Backend API base URL</span>
+    <div className="grid gap-4 lg:grid-cols-2">
+      <form className="panel" onSubmit={saveSettings}>
+        <h2 className="text-lg font-semibold">API Settings</h2>
+        <label className="mt-4 block space-y-1">
+          <span className="text-sm font-medium">Backend API base URL</span>
           <input
             value={apiBaseUrl}
             onChange={(event) => setApiBaseUrlState(event.target.value)}
-            className="w-full rounded-2xl border border-[var(--card-border)] bg-white/50 px-4 py-3 outline-none transition focus:border-brand dark:bg-white/5"
+            className="input-shell"
           />
         </label>
-        <div className="mt-6 flex items-center gap-3">
-          <button
-            type="submit"
-            className="rounded-full bg-brand px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--brand-strong)]"
-          >
+        <div className="mt-4 flex items-center gap-3">
+          <button type="submit" className="button-brand text-sm">
             Save
           </button>
           {saved ? (
-            <span className="text-sm text-success">
-              Saved for this browser session.
+            <span className="text-sm" style={{ color: 'var(--success)' }}>
+              Saved.
             </span>
           ) : null}
         </div>
-        <p className="mt-4 text-sm text-muted">
-          Use <code>npm run dev</code> for local editing or <code>npm run build</code> plus <code>npm run serve:frontend</code> for the stable frontend on port 5173.
-        </p>
       </form>
 
-      <div className="grid gap-4">
-        <section className="panel">
-          <p className="pill">Appearance</p>
-          <h2 className="mt-3 text-2xl font-semibold">Theme</h2>
-          <p className="mt-3 text-sm text-muted">
-            Switch the visual mode without changing the generated outputs.
+      <div className="space-y-4">
+        <div className="panel">
+          <h2 className="text-lg font-semibold">Appearance</h2>
+          <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
+            Switch between light and dark mode.
           </p>
-          <div className="mt-6">
+          <div className="mt-3">
             <ThemeToggle />
           </div>
-        </section>
+        </div>
 
         {healthQuery.isError ? (
           <StatePanel
             badge="Backend issue"
-            title="The frontend cannot reach the configured API"
+            title="Cannot reach the API"
             description={getErrorMessage(healthQuery.error)}
             tone="danger"
             actionLabel="Retry"
             onAction={() => void healthQuery.refetch()}
           />
         ) : (
-          <section className="panel">
-            <p className="pill">Connection</p>
-            <h2 className="mt-3 text-2xl font-semibold">Backend health</h2>
+          <div className="panel">
+            <h2 className="text-lg font-semibold">Backend Health</h2>
             {healthQuery.isLoading ? (
-              <p className="mt-3 text-sm text-muted">
-                Checking the current ArchAI API connection.
-              </p>
+              <p className="mt-2 text-sm" style={{ color: 'var(--text-muted)' }}>Checking connection...</p>
             ) : (
-              <>
-                <p className="mt-3 text-sm text-muted">
-                  Connected to <strong>{healthQuery.data?.service}</strong> in{' '}
-                  <strong>{healthQuery.data?.environment}</strong> mode.
-                </p>
-                <p className="mt-2 text-sm text-muted">
-                  Ollama refinement:{' '}
-                  {healthQuery.data?.ollama_enabled ? 'enabled' : 'disabled'}
-                </p>
-                <p className="mt-2 text-sm text-muted">
-                  Active API URL: <code>{getApiBaseUrl()}</code>
-                </p>
-              </>
+              <div className="mt-2 space-y-1 text-sm" style={{ color: 'var(--text-muted)' }}>
+                <p>Service: <strong>{healthQuery.data?.service}</strong> ({healthQuery.data?.environment})</p>
+                <p>Ollama: {healthQuery.data?.ollama_enabled ? 'enabled' : 'disabled'}</p>
+                <p>URL: <code>{getApiBaseUrl()}</code></p>
+              </div>
             )}
-          </section>
+          </div>
         )}
       </div>
     </div>

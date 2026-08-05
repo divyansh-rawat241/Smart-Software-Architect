@@ -14,45 +14,38 @@ export function ArchitectureCard({
   return (
     <article
       className={cn(
-        'panel h-full transition hover:-translate-y-1',
-        recommended && 'ring-2 ring-[var(--brand-strong)]',
+        'panel transition',
+        recommended && 'ring-2 ring-amber-600',
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="pill">{architecture.style}</div>
-          <h3 className="mt-3 text-xl font-semibold">{architecture.name}</h3>
-          <p className="mt-2 text-sm text-muted">{architecture.overview}</p>
+          <span className="pill">{architecture.style}</span>
+          <h3 className="mt-2 text-lg font-semibold">{architecture.name}</h3>
+          <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>{architecture.overview}</p>
         </div>
-        {recommended ? <CheckCircle2 className="size-6 text-success" /> : null}
+        {recommended ? <CheckCircle2 className="h-5 w-5 shrink-0" style={{ color: 'var(--success)' }} /> : null}
       </div>
 
-      <dl className="mt-5 grid gap-3 text-sm md:grid-cols-3">
+      <div className="mt-3 flex gap-4 text-sm">
         <div>
-          <dt className="text-muted">Complexity</dt>
-          <dd className="mt-1 font-semibold">{architecture.estimated_complexity}</dd>
+          <span style={{ color: 'var(--text-muted)' }}>Complexity: </span>
+          <span className="font-medium">{architecture.estimated_complexity}</span>
         </div>
         <div>
-          <dt className="text-muted">Cost</dt>
-          <dd className="mt-1 font-semibold">{architecture.estimated_cost}</dd>
+          <span style={{ color: 'var(--text-muted)' }}>Cost: </span>
+          <span className="font-medium">{architecture.estimated_cost}</span>
         </div>
-        <div>
-          <dt className="text-muted">API style</dt>
-          <dd className="mt-1 font-semibold">{architecture.api_style}</dd>
-        </div>
-      </dl>
+      </div>
 
-      <div className="mt-5">
-        <h4 className="text-sm font-semibold uppercase tracking-[0.24em] text-muted">
-          Advantages
-        </h4>
-        <ul className="mt-3 space-y-2 text-sm">
+      <div className="mt-3">
+        <div className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Advantages</div>
+        <ul className="mt-1 space-y-1 text-sm">
           {architecture.advantages.map((advantage) => (
-            <li key={advantage}>- {advantage}</li>
+            <li key={advantage}>{advantage}</li>
           ))}
         </ul>
       </div>
     </article>
   )
 }
-

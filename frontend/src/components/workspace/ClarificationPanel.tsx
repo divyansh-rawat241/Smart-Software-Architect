@@ -16,13 +16,13 @@ export function ClarificationPanel({
 
   if (!workspace.clarification_plan.questions.length) {
     return (
-      <section className="panel">
-        <p className="pill">Phase 2</p>
-        <h3 className="mt-3 text-xl font-semibold">Clarifications complete</h3>
-        <p className="mt-2 text-sm text-muted">
-          The workspace is ready for the detailed results.
+      <div className="panel">
+        <span className="pill">Phase 2</span>
+        <h3 className="mt-2 text-lg font-semibold">Clarifications complete</h3>
+        <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
+          The workspace is ready for detailed results.
         </p>
-      </section>
+      </div>
     )
   }
 
@@ -41,28 +41,32 @@ export function ClarificationPanel({
 
   return (
     <form className="panel" onSubmit={handleSubmit}>
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="pill">Phase 2</p>
-          <h3 className="mt-3 text-xl font-semibold">Required follow-ups</h3>
+          <span className="pill">Phase 2</span>
+          <h3 className="mt-2 text-lg font-semibold">Follow-up questions</h3>
         </div>
-        <div className="rounded-2xl bg-[var(--brand-soft)] px-4 py-3 text-sm">
-          Completeness score: <strong>{workspace.clarification_plan.completeness_score}%</strong>
-        </div>
+        <span className="text-sm font-medium">
+          {workspace.clarification_plan.completeness_score}% complete
+        </span>
       </div>
 
-      <div className="mt-5 grid gap-4">
+      <div className="mt-4 space-y-3">
         {workspace.clarification_plan.questions.map((question) => (
-          <div key={question.key} className="rounded-2xl border border-[var(--card-border)] p-4">
-            <div className="flex flex-wrap items-center gap-2">
+          <div
+            key={question.key}
+            className="rounded-lg border p-3"
+            style={{ borderColor: 'var(--card-border)' }}
+          >
+            <div className="flex items-center gap-2">
               <span className="pill">{question.priority}</span>
-              <span className="text-xs uppercase tracking-[0.24em] text-muted">
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                 {question.category}
               </span>
             </div>
-            <p className="mt-3 font-semibold">{question.question}</p>
+            <p className="mt-2 font-medium text-sm">{question.question}</p>
             <select
-              className="mt-4 w-full rounded-2xl border border-[var(--card-border)] bg-white/50 px-4 py-3 outline-none transition focus:border-brand dark:bg-white/5"
+              className="input-shell mt-2"
               value={answers[question.key] ?? ''}
               onChange={(event) => updateAnswer(question.key, event.target.value)}
             >
@@ -77,11 +81,11 @@ export function ClarificationPanel({
         ))}
       </div>
 
-      <div className="mt-5 flex justify-end">
+      <div className="mt-4 flex justify-end">
         <button
           type="submit"
           disabled={isPending}
-          className="rounded-full border border-[var(--card-border)] bg-[var(--surface-strong)] px-5 py-3 text-sm font-semibold transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+          className="button-brand text-sm"
         >
           {isPending ? 'Updating...' : 'Update Results'}
         </button>
