@@ -1,0 +1,336 @@
+# ArchAI - Software Architecture Decision Engine
+
+## What ArchAI Does
+
+ArchAI is a web application that takes a plain-English project brief and automatically generates a complete software architecture package. You describe what you want to build, and ArchAI produces:
+
+- Structured requirements (actors, functional/non-functional requirements, constraints)
+- Three architecture alternatives (Modular Monolith, Microservices, Serverless) with weighted comparison scores
+- Seven UML diagrams (Use Case, Activity, Sequence, Class, ER, Component, Deployment)
+- Database schema design with SQL DDL
+- REST API endpoint specifications
+- Deployment recommendations (Docker, Kubernetes, CI/CD)
+- Exportable Markdown and PDF reports
+
+---
+
+## Tech Stack
+
+### Frontend
+| Technology | Version | Purpose |
+|---|---|---|
+| React | 19.2 | UI framework |
+| TypeScript | 6.0 | Type safety |
+| Vite | 8.2 | Build tool & dev server |
+| TailwindCSS | 3.4 | Utility-first styling |
+| React Router | 7.18 | Client-side routing |
+| TanStack React Query | 5.101 | Server state management & caching |
+| Mermaid | 11.16 | Diagram rendering (flowcharts, ER, sequence, etc.) |
+| Recharts | 3.10 | Radar chart for architecture comparison |
+| React Markdown | 10.1 | Markdown report rendering |
+| Vitest | 4.1 | Unit testing |
+
+### Backend
+| Technology | Version | Purpose |
+|---|---|---|
+| Python | 3.12 | Runtime |
+| FastAPI | 0.116 | REST API framework |
+| SQLAlchemy | 2.0 | ORM & database access |
+| Pydantic | 2.11 | Data validation & schemas |
+| Uvicorn | 0.35 | ASGI server |
+| ReportLab | 4.4 | PDF generation |
+| httpx | 0.28 | HTTP client (Ollama integration) |
+| pytest | 8.4 | Testing |
+| Ollama (qwen3:8b) | Optional | LLM refinement of generated outputs |
+
+### Database
+- **Development:** SQLite (zero-config, file-based)
+- **Production:** PostgreSQL 16 (via Docker)
+
+### Infrastructure
+- Docker & Docker Compose for containerized deployment
+- Nginx for production frontend serving
+
+---
+
+## How It Works - The Pipeline
+
+When a user submits a project brief, ArchAI runs a 9-step generation pipeline:
+
+```
+1. Requirement Analyzer   -->  Extracts actors, features, constraints from the brief
+2. Clarification Engine   -->  Identifies gaps, generates follow-up questions
+3. Architecture Generator -->  Creates 3 architecture alternatives
+4. Comparison Engine      -->  Scores each architecture on 12 weighted metrics
+5. Recommendation Engine  -->  Picks the best option with reasoning
+6. Database Generator     -->  Generates entity-relationship schema + SQL DDL
+7. API Generator          -->  Designs REST endpoint specifications
+8. Deployment Generator   -->  Recommends infrastructure and deployment strategy
+9. Diagram Generator      -->  Produces 7 UML diagrams (Mermaid + PlantUML)
+```
+
+After this, a Documentation Generator compiles everything into a Markdown report and PDF.
+
+### Domain-Aware Generation
+
+The system recognizes four domains out of the box:
+- **EV Charging Booking Platform** - stations, chargers, bookings, sessions, payments
+- **Online Pharmacy** - products, prescriptions, orders, inventory, shipments
+- **E-Commerce** - products, orders, payments, shipments
+- **Generic Digital Platform** - fallback for any other domain
+
+Each domain has pre-built templates for requirements, database entities, API endpoints, and diagrams. For unrecognized domains, the system uses a generic fallback that adapts based on keywords in the brief.
+
+### Optional LLM Refinement
+
+If Ollama is running locally with the `qwen3:8b` model, ArchAI sends the rule-based outputs to the LLM for optional refinement (improving specificity and detail). If Ollama is unavailable, the system works perfectly on rule-based generation alone.
+
+---
+
+## Project Structure
+
+```
+software-project/
+|
+|-- backend/
+|   |-- app/
+|   |   |-- main.py                  # FastAPI entry point
+|   |   |-- core/
+|   |   |   |-- config.py            # Environment settings (pydantic-settings)
+|   |   |   |-- database.py          # SQLAlchemy engine & session
+|   |   |   |-- logging.py           # Logging configuration
+|   |   |-- api/
+|   |   |   |-- deps.py              # Dependency injection (DB session)
+|   |   |   |-- routes/
+|   |   |       |-- health.py        # GET /api/v1/health
+|   |   |       |-- workspaces.py    # CRUD + clarifications + changes
+|   |   |-- models/
+|   |   |   |-- workspace.py         # SQLAlchemy model (single workspaces table)
+|   |   |-- schemas/
+|   |   |   |-- domain.py            # All Pydantic models (40+ schemas)
+|   |   |-- repositories/
+|   |   |   |-- workspace_repository.py  # Database operations
+|   |   |-- services/
+|   |       |-- workspace_orchestrator.py # Central orchestrator (runs the pipeline)
+|   |       |-- requirement_analyzer.py   # Step 1: Extract requirements
+|   |       |-- clarification_engine.py   # Step 2: Generate follow-up questions
+|   |       |-- architecture_generator.py # Step 3: Generate 3 architecture options
+|   |       |-- comparison_engine.py      # Step 4: Score & compare architectures
+|   |       |-- recommendation_engine.py  # Step 5: Pick best architecture
+|   |       |-- database_generator.py     # Step 6: Generate DB schema + SQL
+|   |       |-- api_generator.py          # Step 7: Generate API endpoints
+|   |       |-- deployment_generator.py   # Step 8: Deployment recommendations
+|   |       |-- diagram_generator.py      # Step 9: Generate 7 UML diagrams
+|   |       |-- documentation_generator.py # Markdown + PDF export
+|   |       |-- impact_analyzer.py        # Impact analysis for change requests
+|   |       |-- ai/
+|   |           |-- client.py            # Ollama integration
+|   |           |-- prompts.py           # LLM prompt templates
+|   |-- tests/                     # pytest test suite
+|   |-- migrations/                # SQL migration scripts
+|   |-- requirements.txt           # Python dependencies
+|   |-- Dockerfile
+|
+|-- frontend/
+|   |-- src/
+|   |   |-- main.tsx               # React entry point
+|   |   |-- App.tsx                # Route definitions
+|   |   |-- index.css              # Global styles & design tokens
+|   |   |-- pages/
+|   |   |   |-- DashboardPage.tsx         # Create briefs, view workspaces
+|   |   |   |-- RequirementWizardPage.tsx # View structured requirements
+|   |   |   |-- ArchitectureStudioPage.tsx # Compare architectures
+|   |   |   |-- ComparisonPage.tsx        # Radar chart + scorecard table
+|   |   |   |-- DiagramsPage.tsx          # View all 7 diagrams
+|   |   |   |-- DocsPage.tsx              # View & export reports
+|   |   |   |-- SettingsPage.tsx          # API config & health check
+|   |   |   |-- LandingPage.tsx           # Product overview
+|   |   |-- components/
+|   |   |   |-- layout/            # AppShell, ThemeToggle
+|   |   |   |-- workspace/         # WorkspaceForm, ClarificationPanel, etc.
+|   |   |   |-- diagrams/          # MermaidDiagram, ArchitectureFlow
+|   |   |   |-- charts/            # RadarComparisonChart
+|   |   |   |-- docs/              # MarkdownPanel
+|   |   |-- hooks/                 # useTheme, useWorkspaces
+|   |   |-- lib/                   # API client, utilities, sample data
+|   |   |-- types/                 # TypeScript type definitions
+|   |-- package.json
+|   |-- Dockerfile
+|
+|-- docker-compose.yml             # 3-service setup (postgres, backend, frontend)
+|-- package.json                   # Root workspace scripts
+```
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/v1/health` | Health check (returns service status, environment, Ollama status) |
+| GET | `/api/v1/workspaces` | List all workspaces |
+| POST | `/api/v1/workspaces` | Create workspace from a project brief |
+| GET | `/api/v1/workspaces/{id}` | Get a specific workspace |
+| POST | `/api/v1/workspaces/{id}/clarifications` | Submit clarification answers, regenerate workspace |
+| POST | `/api/v1/workspaces/{id}/changes` | Apply a change request (impact-aware regeneration) |
+| GET | `/api/v1/workspaces/{id}/documentation/markdown` | Download Markdown report |
+| GET | `/api/v1/workspaces/{id}/documentation/pdf` | Download PDF report |
+
+---
+
+## Workspace Lifecycle
+
+### Phase 1: Creation
+1. User enters a project brief (title, description, business context, budget, cloud preference, constraints)
+2. Backend analyzes the brief and extracts requirements
+3. If the system detects gaps, it generates clarification questions
+4. All artifacts are generated (architectures, diagrams, DB schema, APIs, deployment plan, documentation)
+
+### Phase 2: Clarification
+1. User answers the follow-up questions (e.g., authentication method, payment integration, SLA targets)
+2. Backend merges answers and regenerates all artifacts with improved accuracy
+3. Completeness score updates
+
+### Phase 3: Exploration
+1. **Requirements** - View actors, functional/non-functional requirements, constraints
+2. **Architecture** - Compare 3 alternatives side by side with per-metric scores
+3. **Diagrams** - Browse 7 diagram types rendered from Mermaid syntax
+4. **Report** - Read the full Markdown documentation or export as PDF
+
+### Phase 4: Iteration (Change Requests)
+1. User submits a change request (e.g., "add real-time notifications")
+2. `ImpactAnalyzer` determines which modules are affected
+3. Only affected services re-run (not the entire pipeline)
+4. Impact history is tracked
+
+---
+
+## Architecture Comparison System
+
+ArchAI scores each architecture on 12 metrics:
+
+| Metric | What It Measures |
+|---|---|
+| Scalability | How well it handles growth |
+| Performance | Response time and throughput |
+| Maintainability | Ease of code changes |
+| Security | Auth, data protection, compliance |
+| Cost | Infrastructure and development cost |
+| Reliability | Uptime and failure handling |
+| Availability | Target uptime achievement |
+| Deployment Complexity | How hard it is to deploy |
+| Learning Curve | Team ramp-up time |
+| Development Time | Speed to first release |
+| Fault Isolation | Blast radius of failures |
+| Operational Complexity | Day-to-day management overhead |
+
+Weights are adjusted based on the project's scale profile:
+- **Startup scale** - favors lower cost, faster development, simpler deployment
+- **Growth scale** - balanced weights
+- **High scale** - favors scalability, availability, fault isolation
+
+---
+
+## Database Design
+
+Single `workspaces` table stores everything as JSON columns:
+
+| Column | Contents |
+|---|---|
+| `requirements_json` | Actors, functional/non-functional requirements, constraints |
+| `clarification_json` | Questions, answers, completeness score |
+| `architectures_json` | 3 architecture options with components, tech stacks, pros/cons |
+| `comparison_json` | 12-metric scorecards with weights |
+| `recommendation_json` | Best architecture choice with reasoning |
+| `diagrams_json` | 7 diagram artifacts (Mermaid + PlantUML syntax) |
+| `database_design_json` | Entities, relationships, SQL DDL |
+| `api_design_json` | Endpoint specifications |
+| `deployment_plan_json` | Infrastructure recommendations |
+| `documentation_markdown` | Full Markdown report |
+| `impact_history_json` | Change request audit trail |
+
+---
+
+## Frontend Pages
+
+| Page | Route | What It Shows |
+|---|---|---|
+| Dashboard | `/dashboard` | Create project briefs, view workspace summary, answer clarifications |
+| Requirements | `/wizard` | Actors, functional/non-functional requirements, constraints, assumptions |
+| Architecture | `/architecture` | Comparison table, architecture selector, component flow, tech stack, trade-offs |
+| Comparison | `/comparison` | Radar chart visualization, scoring rationale, full scorecard table |
+| Diagrams | `/diagrams` | 7 diagram types with Mermaid rendering, source toggle, PNG export |
+| Report | `/docs` | Markdown report with Markdown/PDF download buttons |
+| Settings | `/settings` | API URL config, theme toggle, backend health check |
+
+---
+
+## Running the Project
+
+### Development (without Docker)
+```bash
+# Terminal 1 - Backend
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+
+# Terminal 2 - Frontend
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend: http://localhost:5173
+Backend API: http://localhost:8000
+
+### Production (with Docker)
+```bash
+docker compose up --build
+```
+
+Frontend: http://localhost:3000
+Backend API: http://localhost:8000
+PostgreSQL: localhost:5432
+
+### Running Tests
+```bash
+# Backend tests
+cd backend && python -m pytest
+
+# Frontend tests
+cd frontend && npm test
+
+# Full smoke test
+npm run smoke
+```
+
+---
+
+## Key Design Decisions
+
+1. **Rule-based generation as primary, LLM as optional refinement** - The system works without any AI model. Templates and keyword matching generate complete outputs. Ollama improves specificity but is never required.
+
+2. **Single-table JSON storage** - All workspace data lives in one table with JSON columns. This simplifies the schema and makes it easy to serialize/deserialize complex nested structures.
+
+3. **Impact-aware regeneration** - Change requests don't regenerate everything. The `ImpactAnalyzer` maps keywords to affected modules and only re-runs those services.
+
+4. **Dual diagram syntax** - Every diagram is generated in both Mermaid (for in-browser rendering) and PlantUML (for external tooling).
+
+5. **Domain-aware templates** - Pre-built blueprints for EV Charging, Online Pharmacy, and E-Commerce domains produce more accurate outputs than generic generation.
+
+---
+
+## Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `ARCHAI_APP_NAME` | ArchAI | Application name |
+| `ARCHAI_ENVIRONMENT` | development | Environment label |
+| `ARCHAI_DATABASE_URL` | sqlite:///./archai.db | Database connection string |
+| `ARCHAI_ALLOWED_ORIGINS` | localhost:5173,4173,3000 | CORS allowed origins |
+| `ARCHAI_OLLAMA_ENABLED` | true | Enable LLM refinement |
+| `ARCHAI_OLLAMA_BASE_URL` | http://localhost:11434 | Ollama server URL |
+| `ARCHAI_OLLAMA_MODEL` | qwen3:8b | Model to use for refinement |
+| `ARCHAI_LOG_LEVEL` | INFO | Logging level |
