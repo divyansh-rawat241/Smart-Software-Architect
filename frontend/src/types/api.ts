@@ -167,6 +167,70 @@ export interface ImpactAssessment {
   regenerated_sections: string[]
 }
 
+export interface ArchitectureDecisionRecord {
+  id: string
+  timestamp: string
+  title: string
+  context: string
+  decision: string
+  status: string
+  consequences: string
+  changed_modules: string[]
+}
+
+export interface CriteriaWeights {
+  weights: Record<string, number>
+}
+
+export interface ReweightRequest {
+  matrix: Record<string, Record<string, number>>
+  weights: CriteriaWeights
+}
+
+export interface ExportAdrsRequest {
+  adrs: ArchitectureDecisionRecord[]
+}
+
+export interface ComponentStatus {
+  component: string
+  role: string
+  status: 'down' | 'degraded' | 'healthy'
+  reason?: string | null
+}
+
+export interface BlastRadiusResult {
+  failed_component: string
+  architecture_id: string
+  statuses: ComponentStatus[]
+  impact_summary: string
+  severity_score: number
+}
+
+export interface BlastRadiusRequest {
+  architecture: ArchitectureOption
+  failed_component: string
+  comparison_matrix: Record<string, Record<string, number>>
+}
+
+export interface ResilienceRecommendation {
+  id: string
+  name: string
+  category: string
+  description: string
+  severity_reduction: number
+}
+
+export interface ResilienceRecommendationsRequest {
+  blast_result: BlastRadiusResult
+  architecture: ArchitectureOption
+}
+
+export interface ApplyMitigationsRequest {
+  blast_result: BlastRadiusResult
+  selected_mitigation_ids: string[]
+  architecture: ArchitectureOption
+}
+
 export interface Workspace {
   id: string
   title: string
@@ -184,6 +248,7 @@ export interface Workspace {
   deployment_plan: DeploymentPlan
   documentation_markdown: string
   impact_history: ImpactAssessment[]
+  adr?: ArchitectureDecisionRecord | null
   created_at: string
   updated_at: string
 }

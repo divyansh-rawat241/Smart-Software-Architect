@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Network,
   Settings,
+  Zap,
 } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { cn } from '../../lib/utils'
@@ -18,6 +19,7 @@ const navItems = [
   { to: '/wizard', label: 'Requirements', icon: ClipboardList },
   { to: '/architecture', label: 'Architecture', icon: Network },
   { to: '/comparison', label: 'Comparison', icon: BarChart3 },
+  { to: '/blast-radius', label: 'Blast Radius', icon: Zap },
   { to: '/diagrams', label: 'Diagrams', icon: Image },
   { to: '/docs', label: 'Report', icon: FileText },
   { to: '/settings', label: 'Settings', icon: Settings },

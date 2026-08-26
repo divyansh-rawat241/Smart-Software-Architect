@@ -1,10 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ArchitectureFlow } from '../components/diagrams/ArchitectureFlow'
 import { StatePanel } from '../components/workspace/StatePanel'
+import { ADRTimeline } from '../components/workspace/ADRTimeline'
 import { useWorkspacesQuery } from '../hooks/useWorkspaces'
 import { getActiveWorkspace, getErrorMessage, formatMetricName } from '../lib/utils'
-import type { ArchitectureOption } from '../types/api'
+import type { ArchitectureOption, ArchitectureDecisionRecord, Workspace } from '../types/api'
+
+interface TimelineEntry {
+  adr: ArchitectureDecisionRecord
+  snapshot: Workspace
+}
 
 export function ArchitectureStudioPage() {
   const [searchParams] = useSearchParams()
@@ -16,9 +22,21 @@ export function ArchitectureStudioPage() {
   const recommendedId = workspace?.recommendation.recommended_architecture_id ?? ''
   const [selectedId, setSelectedId] = useState(recommendedId)
 
+  const [timelineEntries, setTimelineEntries] = useState<TimelineEntry[]>([])
+  const [activeTimelineIndex, setActiveTimelineIndex] = useState(0)
+  const lastAdrIdRef = useRef<string | null>(null)
+
   useEffect(() => {
     if (recommendedId) setSelectedId(recommendedId)
   }, [recommendedId, workspace?.id])
+
+  useEffect(() => {
+    if (!workspace?.adr) return
+    if (workspace.adr.id === lastAdrIdRef.current) return
+    lastAdrIdRef.current = workspace.adr.id
+    setTimelineEntries((prev) => [...prev, { adr: workspace.adr!, snapshot: workspace }])
+    setActiveTimelineIndex((prev) => prev + 1)
+  }, [workspace])
 
   if (workspaceQuery.isLoading) {
     return <StatePanel badge="Loading" title="Loading architecture" description="Preparing the view." />
@@ -192,6 +210,14 @@ export function ArchitectureStudioPage() {
             </div>
           </div>
         </>
+      )}
+
+      {timelineEntries.length > 0 && (
+        <ADRTimeline
+          entries={timelineEntries}
+          activeIndex={activeTimelineIndex}
+          onSelect={(index) => setActiveTimelineIndex(index)}
+        />
       )}
     </div>
   )

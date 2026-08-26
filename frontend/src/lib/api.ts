@@ -1,4 +1,6 @@
-import type { Workspace, WorkspaceCreatePayload } from '../types/api'
+import type { Workspace, WorkspaceCreatePayload, ReweightRequest, ExportAdrsRequest, BlastRadiusRequest } from '../types/api'
+import type { ArchitectureScorecard, BlastRadiusResult } from '../types/api'
+import type { ResilienceRecommendationsRequest, ApplyMitigationsRequest, ResilienceRecommendation } from '../types/api'
 import type { HealthStatus } from '../types/client'
 
 const STORAGE_KEY = 'archai-api-base'
@@ -123,4 +125,53 @@ export async function downloadPdf(workspaceId: string) {
     throw new Error(await response.text())
   }
   return response.blob()
+}
+
+export function reweightArchitectures(payload: ReweightRequest) {
+  return request<ArchitectureScorecard[]>('/analysis/reweight', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function exportAdrs(payload: ExportAdrsRequest) {
+  let response: Response
+
+  try {
+    response = await fetch(`${getApiBaseUrl()}/analysis/export-adrs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  } catch {
+    throw new Error(
+      `Could not reach the ArchAI API at ${getApiBaseUrl()} while exporting ADRs.`,
+    )
+  }
+
+  if (!response.ok) {
+    throw new Error(await response.text())
+  }
+  return response.blob()
+}
+
+export function simulateBlastRadius(payload: BlastRadiusRequest) {
+  return request<BlastRadiusResult>('/analysis/blast-radius', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function fetchResilienceRecommendations(payload: ResilienceRecommendationsRequest) {
+  return request<ResilienceRecommendation[]>('/analysis/resilience-recommendations', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function applyMitigations(payload: ApplyMitigationsRequest) {
+  return request<BlastRadiusResult>('/analysis/blast-radius/apply-mitigations', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
 }

@@ -1,7 +1,11 @@
+import uuid
+from datetime import datetime, timezone
+
 from app.models.workspace import Workspace
 from app.repositories.workspace_repository import WorkspaceRepository
 from app.schemas.domain import (
     ApiDesign,
+    ArchitectureDecisionRecord,
     ArchitectureOption,
     ClarificationPlan,
     ComparisonResult,
@@ -79,7 +83,9 @@ class WorkspaceOrchestrator:
             documentation_markdown=generated["documentation_markdown"],
             impact_history_json=[],
         )
-        return self._to_response(self.repository.add(workspace))
+        response = self._to_response(self.repository.add(workspace))
+        response.adr = generated["adr"]
+        return response
 
     def answer_clarifications(
         self, workspace_id: str, answers: dict[str, str]
@@ -105,7 +111,9 @@ class WorkspaceOrchestrator:
 
         workspace.answers_json = merged_answers
         self._apply_generated_content(workspace, generated)
-        return self._to_response(self.repository.save(workspace))
+        response = self._to_response(self.repository.save(workspace))
+        response.adr = generated.get("adr")
+        return response
 
     def apply_change_request(
         self, workspace_id: str, change_request: str
@@ -169,7 +177,16 @@ class WorkspaceOrchestrator:
         history.append(impact.model_dump())
         workspace.impact_history_json = history
 
-        return self._to_response(self.repository.save(workspace))
+        adr = self._build_adr(
+            title=change_request[:80],
+            context=change_request,
+            recommendation=recommendation,
+            changed_modules=impact.impacted_modules,
+        )
+
+        result = self._to_response(self.repository.save(workspace))
+        result.adr = adr
+        return result
 
     def export_pdf(self, workspace_id: str) -> bytes | None:
         workspace = self.repository.get(workspace_id)
@@ -203,6 +220,14 @@ class WorkspaceOrchestrator:
             deployment_plan,
         )
 
+        adr = self._build_adr(
+            title="Initial Analysis",
+            context=description,
+            recommendation=recommendation,
+            changed_modules=["requirements", "architectures", "comparison", "recommendation",
+                             "diagrams", "database", "api", "deployment", "documentation"],
+        )
+
         response = WorkspaceResponse(
             id="preview",
             title=title,
@@ -220,6 +245,7 @@ class WorkspaceOrchestrator:
             deployment_plan=deployment_plan,
             documentation_markdown="",
             impact_history=[],
+            adr=adr,
             created_at=self._placeholder_datetime(),
             updated_at=self._placeholder_datetime(),
         )
@@ -235,6 +261,7 @@ class WorkspaceOrchestrator:
             "deployment_plan": deployment_plan,
             "diagrams": diagrams,
             "documentation_markdown": documentation_markdown,
+            "adr": adr,
         }
 
     def _apply_generated_content(self, workspace: Workspace, generated: dict) -> None:
@@ -296,3 +323,40 @@ class WorkspaceOrchestrator:
         from datetime import datetime, timezone
 
         return datetime.now(timezone.utc)
+
+    def _build_adr(
+        self,
+        title: str,
+        context: str,
+        recommendation: RecommendationResult,
+        changed_modules: list[str],
+    ) -> ArchitectureDecisionRecord:
+        """Construct an ArchitectureDecisionRecord from the current state.
+
+        This is a pure data-assembly step with no LLM involvement.
+        The title is derived from the change_request text or defaults
+        to 'Initial Analysis'. Consequences are summarised from the
+        recommendation's why_not data.
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        why_not_summary = "; ".join(
+            f"{name}: {reasons[0]}"
+            for name, reasons in (recommendation.why_not or {}).items()
+            if reasons
+        ) or "No alternatives were shortlisted."
+
+        consequences = (
+            f"Accepted trade-offs: {why_not_summary} "
+            f"Confidence: {recommendation.confidence}."
+        )
+
+        return ArchitectureDecisionRecord(
+            id=str(uuid.uuid4()),
+            timestamp=now,
+            title=title,
+            context=context,
+            decision=recommendation.recommended_architecture_name,
+            status="accepted",
+            consequences=consequences,
+            changed_modules=changed_modules,
+        )

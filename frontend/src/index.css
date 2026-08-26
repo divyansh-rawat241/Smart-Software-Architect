@@ -131,4 +131,20 @@ textarea {
     width: 100%;
     height: auto;
   }
+
+  @keyframes blast-ripple {
+    0% {
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+    70% {
+      box-shadow: 0 0 0 12px rgba(239, 68, 68, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+  }
+
+  .blast-ripple {
+    animation: blast-ripple 0.8s ease-out;
+  }
 }

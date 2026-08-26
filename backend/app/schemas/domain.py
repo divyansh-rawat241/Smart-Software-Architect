@@ -172,6 +172,131 @@ class ImpactAssessment(BaseModel):
     regenerated_sections: list[str] = Field(default_factory=list)
 
 
+class CriteriaWeights(BaseModel):
+    """User-adjustable weights for each scoring criterion.
+
+    Values range 0.0-3.0 where 1.0 is the neutral default.
+    Used by the What-If Playground to let stakeholders explore
+    how different priority emphases change the architecture ranking.
+    All scoring remains deterministic and rule-based.
+    """
+
+    weights: dict[str, float] = Field(default_factory=dict)
+
+
+class ArchitectureDecisionRecord(BaseModel):
+    """Immutable snapshot of a single architectural decision.
+
+    Created at initial analysis and each evolution step. The frontend
+    accumulates these client-side to build the decision history timeline
+    without requiring server-side storage.
+    """
+
+    id: str
+    timestamp: str
+    title: str
+    context: str
+    decision: str
+    status: str = "accepted"
+    consequences: str
+    changed_modules: list[str] = Field(default_factory=list)
+
+
+class ReweightRequest(BaseModel):
+    """Lightweight payload for the What-If reweight endpoint.
+
+    Contains the raw score matrix (architecture x criterion) and
+    the user's desired weights. The server recomputes the weighted
+    sum and returns re-ranked ArchitectureScorecards.
+    """
+
+    matrix: dict[str, dict[str, int]]
+    weights: CriteriaWeights
+
+
+class ExportAdrsRequest(BaseModel):
+    """Payload for the ADR export endpoint.
+
+    Accepts a list of ArchitectureDecisionRecords accumulated by the
+    frontend and returns formatted markdown.
+    """
+
+    adrs: list[ArchitectureDecisionRecord]
+
+
+class ComponentStatus(BaseModel):
+    """Status of a single component after a simulated failure."""
+
+    component: str
+    role: str
+    status: str  # "down" | "degraded" | "healthy"
+    reason: str | None = None
+
+
+class BlastRadiusResult(BaseModel):
+    """Deterministic blast-radius simulation result for a component failure.
+
+    Contains per-component status, a plain-English impact summary, and a
+    severity score 0-10. All fields are computed rule-based — no LLM.
+    """
+
+    failed_component: str
+    architecture_id: str
+    statuses: list[ComponentStatus] = Field(default_factory=list)
+    impact_summary: str
+    severity_score: float
+
+
+class BlastRadiusRequest(BaseModel):
+    """Payload for the blast-radius simulation endpoint.
+
+    Accepts the target architecture, the component that failed, and the
+    comparison matrix (needed for the fault_isolation score).
+    """
+
+    architecture: ArchitectureOption
+    failed_component: str
+    comparison_matrix: dict[str, dict[str, int]]
+
+
+class ResilienceRecommendation(BaseModel):
+    """A single deterministic mitigation suggestion for reducing blast radius.
+
+    Each recommendation maps to a hard-coded entry in the MITIGATION_CATALOG.
+    The LLM never decides scores or recommendations — only prose descriptions.
+    """
+
+    id: str
+    name: str
+    category: str
+    description: str
+    severity_reduction: float
+
+
+class ResilienceRecommendationsRequest(BaseModel):
+    """Payload for the resilience-recommendations endpoint.
+
+    Accepts a completed blast radius result and the architecture it was
+    simulated against. Returns deterministic mitigation suggestions.
+    """
+
+    blast_result: BlastRadiusResult
+    architecture: ArchitectureOption
+
+
+class ApplyMitigationsRequest(BaseModel):
+    """Payload for the blast-radius/apply-mitigations endpoint.
+
+    Accepts a blast radius result, a list of selected mitigation IDs,
+    and the architecture. Returns a modified blast radius result with
+    updated statuses and reduced severity score.
+    """
+
+    blast_result: BlastRadiusResult
+    selected_mitigation_ids: list[str]
+    architecture: ArchitectureOption
+
+
 class WorkspaceCreateRequest(BaseModel):
     title: str
     description: str
@@ -206,6 +331,7 @@ class WorkspaceResponse(BaseModel):
     deployment_plan: DeploymentPlan
     documentation_markdown: str
     impact_history: list[ImpactAssessment] = Field(default_factory=list)
+    adr: ArchitectureDecisionRecord | None = None
     created_at: datetime
     updated_at: datetime
 

@@ -2,6 +2,7 @@ from app.schemas.domain import (
     ArchitectureOption,
     ArchitectureScorecard,
     ComparisonResult,
+    CriteriaWeights,
     MetricScore,
     RequirementModel,
 )
@@ -228,4 +229,51 @@ class ComparisonEngine:
             ],
         }
         return risk_map[architecture_id]
+
+
+def recompute_with_weights(
+    matrix: dict[str, dict[str, int]],
+    criteria_weights: CriteriaWeights,
+) -> list[ArchitectureScorecard]:
+    """Re-rank architectures using user-specified criterion weights.
+
+    This is a pure computation with no LLM involvement — it takes the
+    existing score matrix and applies a weighted sum, normalised by the
+    sum of active weights so the total_score stays on the 0-10 scale.
+
+    Called on every slider drag in the What-If Playground, so it must
+    be fast and side-effect free.
+    """
+    active_weights = criteria_weights.weights
+    weight_sum = sum(active_weights.values()) or 1.0
+
+    scorecards: list[ArchitectureScorecard] = []
+    for arch_name, scores in matrix.items():
+        weighted_total = sum(
+            scores.get(metric, 0) * active_weights.get(metric, 1.0)
+            for metric in METRICS
+        )
+        total_score = round(weighted_total / weight_sum, 1)
+        metric_scores = [
+            MetricScore(
+                metric=metric,
+                score=scores.get(metric, 0),
+                explanation=f"Score {scores.get(metric, 0)}/10 for {metric.replace('_', ' ')}.",
+            )
+            for metric in METRICS
+        ]
+        scorecards.append(
+            ArchitectureScorecard(
+                architecture_id=arch_name,
+                architecture_name=arch_name.replace("-", " ").title(),
+                overall_score=total_score,
+                weighted_score=round(weighted_total, 1),
+                metric_scores=metric_scores,
+                strengths=[],
+                risks=[],
+            )
+        )
+
+    scorecards.sort(key=lambda s: s.overall_score, reverse=True)
+    return scorecards
 
