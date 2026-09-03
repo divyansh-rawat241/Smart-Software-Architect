@@ -1,6 +1,7 @@
 import type { Workspace, WorkspaceCreatePayload, ReweightRequest, ExportAdrsRequest, BlastRadiusRequest } from '../types/api'
 import type { ArchitectureScorecard, BlastRadiusResult } from '../types/api'
 import type { ResilienceRecommendationsRequest, ApplyMitigationsRequest, ResilienceRecommendation } from '../types/api'
+import type { BudgetCompareRequest, BudgetEstimate, BudgetEstimateRequest, ConwayFitRequest, ConwayFitResult, TwinMatch, TwinMatchRequest } from '../types/api'
 import type { HealthStatus } from '../types/client'
 
 const STORAGE_KEY = 'archai-api-base'
@@ -171,6 +172,34 @@ export function fetchResilienceRecommendations(payload: ResilienceRecommendation
 
 export function applyMitigations(payload: ApplyMitigationsRequest) {
   return request<BlastRadiusResult>('/analysis/blast-radius/apply-mitigations', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function checkConwayFit(payload: ConwayFitRequest) {
+  return request<ConwayFitResult>('/conway-fit', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function fetchTwinMatches(payload: TwinMatchRequest) {
+  return request<TwinMatch[]>('/twin-match', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function fetchBudgetEstimate(payload: BudgetEstimateRequest) {
+  return request<BudgetEstimate>('/budget-estimate', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function fetchBudgetComparison(payload: BudgetCompareRequest) {
+  return request<Record<string, BudgetEstimate>>('/budget-compare', {
     method: 'POST',
     body: JSON.stringify(payload),
   })

@@ -8,6 +8,9 @@ import { BlastRadiusPage } from './pages/BlastRadiusPage'
 import { DiagramsPage } from './pages/DiagramsPage'
 import { DocsPage } from './pages/DocsPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { TeamFitPage } from './pages/TeamFitPage'
+import { IndustryTwinsPage } from './pages/IndustryTwinsPage'
+import { BudgetPage } from './pages/BudgetPage'
 
 function App() {
   return (
@@ -19,6 +22,9 @@ function App() {
         <Route path="/architecture" element={<ArchitectureStudioPage />} />
         <Route path="/comparison" element={<ComparisonPage />} />
         <Route path="/blast-radius" element={<BlastRadiusPage />} />
+        <Route path="/team-fit" element={<TeamFitPage />} />
+        <Route path="/industry-twins" element={<IndustryTwinsPage />} />
+        <Route path="/budget" element={<BudgetPage />} />
         <Route path="/diagrams" element={<DiagramsPage />} />
         <Route path="/docs" element={<DocsPage />} />
         <Route path="/settings" element={<SettingsPage />} />

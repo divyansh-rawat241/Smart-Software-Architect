@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from 'react'
-import { ThemeToggle } from '../components/layout/ThemeToggle'
 import { StatePanel } from '../components/workspace/StatePanel'
 import { useHealthQuery } from '../hooks/useWorkspaces'
 import { getApiBaseUrl, setApiBaseUrl } from '../lib/api'
@@ -42,16 +41,6 @@ export function SettingsPage() {
       </form>
 
       <div className="space-y-4">
-        <div className="panel">
-          <h2 className="text-lg font-semibold">Appearance</h2>
-          <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
-            Switch between light and dark mode.
-          </p>
-          <div className="mt-3">
-            <ThemeToggle />
-          </div>
-        </div>
-
         {healthQuery.isError ? (
           <StatePanel
             badge="Backend issue"

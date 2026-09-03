@@ -7,6 +7,7 @@ import {
   Tooltip,
 } from 'recharts'
 import { formatMetricName } from '../../lib/utils'
+import { chartTheme } from '../../lib/chartTheme'
 import type { ComparisonResult } from '../../types/api'
 
 interface RadarComparisonChartProps {
@@ -41,12 +42,12 @@ export function RadarComparisonChart({
       <div className="mt-4 h-[320px]">
         <ResponsiveContainer>
           <RadarChart data={data}>
-            <PolarGrid />
+            <PolarGrid stroke={chartTheme.grid} />
             <PolarAngleAxis
               dataKey="metric"
-              tick={{ fill: 'currentColor', fontSize: 11 }}
+              tick={{ fill: chartTheme.axis, fontSize: 11 }}
             />
-            <Tooltip />
+            <Tooltip {...chartTheme.tooltip} />
             {comparison.scorecards.map((scorecard, index) => (
               <Radar
                 key={scorecard.architecture_id}

@@ -90,11 +90,13 @@ export function DiagramsPage() {
           <button
             key={diagramKey}
             type="button"
+            role="tab"
+            aria-selected={diagramKey === selectedKey}
             onClick={() => setSelectedKey(diagramKey)}
             className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
               diagramKey === selectedKey
-                ? 'bg-amber-600 text-white'
-                : 'border hover:bg-black/5 dark:hover:bg-white/5'
+                ? 'border-b-2 border-amber-400 bg-amber-500/15 font-bold text-amber-300'
+                : 'border text-slate-400 hover:bg-white/5 hover:text-slate-200'
             }`}
             style={{ borderColor: 'var(--card-border)' }}
           >

@@ -231,6 +231,117 @@ export interface ApplyMitigationsRequest {
   architecture: ArchitectureOption
 }
 
+export interface OwnershipSuggestion {
+  component: string
+  suggested_team: string
+  reason: string
+}
+
+export interface FrictionPoint {
+  description: string
+  severity: 'low' | 'medium' | 'high'
+  affected_components: string[]
+  affected_teams: string[]
+}
+
+export interface ConwayFitResult {
+  fit_score: number
+  team_fit_plan: TeamFitPlan
+  ownership_mapping: OwnershipSuggestion[]
+  friction_points: FrictionPoint[]
+  summary: string
+}
+
+export interface ConwayFitRequest {
+  architecture: ArchitectureOption
+  entities: string[]
+  constraints: ProjectConstraints
+}
+
+export interface RoleDefinition {
+  role_name: string
+  description: string
+  suggested_percentage: number
+  min_headcount: number
+  essential: boolean
+}
+
+export interface RoleRecommendation {
+  role_name: string
+  description: string
+  recommended_headcount: number
+  rationale: string
+}
+
+export interface TeamFitPlan {
+  architecture_id: string
+  total_team_size: number
+  roles: RoleRecommendation[]
+  coverage_warning?: string | null
+}
+
+export interface TwinCaseStudy {
+  id: string
+  company: string
+  architecture_id: string
+  score_vector: Record<string, number>
+  notable_services: string[]
+  summary: string
+  lesson: string
+  source_note: string
+}
+
+export interface TwinMatch {
+  case_study: TwinCaseStudy
+  similarity_score: number
+  overlap_services: string[]
+  rationale: string
+}
+
+export interface TwinMatchRequest {
+  comparison_matrix: Record<string, Record<string, number>>
+  recommended_architecture_id: string
+  deployment_stack: string[]
+  weights?: Record<string, number>
+}
+
+export interface ProjectConstraints {
+  team_size: number
+  budget_level: 'low' | 'medium' | 'high'
+  expected_scale: string
+  timeline_weeks: number
+}
+
+export interface BudgetLineItem {
+  label: string
+  monthly_cost_usd: number
+  category: 'infrastructure' | 'team' | 'tooling'
+}
+
+export interface ScaleBudget {
+  scale_tier: string
+  total_monthly_usd: number
+  line_items: BudgetLineItem[]
+}
+
+export interface BudgetEstimate {
+  architecture_id: string
+  budgets_by_scale: ScaleBudget[]
+  assumptions: string[]
+}
+
+export interface BudgetEstimateRequest {
+  architecture: ArchitectureOption
+  deployment_stack: string[]
+  constraints: ProjectConstraints
+}
+
+export interface BudgetCompareRequest {
+  architectures: ArchitectureOption[]
+  deployment_stacks: Record<string, string[]>
+  constraints: ProjectConstraints
+}
+
 export interface Workspace {
   id: string
   title: string
@@ -261,4 +372,3 @@ export interface WorkspaceCreatePayload {
   preferred_cloud?: string
   constraints: string[]
 }
-

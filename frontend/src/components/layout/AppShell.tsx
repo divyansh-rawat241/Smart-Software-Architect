@@ -7,11 +7,13 @@ import {
   LayoutDashboard,
   Network,
   Settings,
+  Users,
+  Building2,
+  DollarSign,
   Zap,
 } from 'lucide-react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { cn } from '../../lib/utils'
-import { ThemeToggle } from './ThemeToggle'
 
 const navItems = [
   { to: '/', label: 'Overview', icon: Home },
@@ -20,10 +22,29 @@ const navItems = [
   { to: '/architecture', label: 'Architecture', icon: Network },
   { to: '/comparison', label: 'Comparison', icon: BarChart3 },
   { to: '/blast-radius', label: 'Blast Radius', icon: Zap },
+  { to: '/team-fit', label: 'Team Fit', icon: Users },
+  { to: '/industry-twins', label: 'Industry Twins', icon: Building2 },
+  { to: '/budget', label: 'Budget', icon: DollarSign },
   { to: '/diagrams', label: 'Diagrams', icon: Image },
   { to: '/docs', label: 'Report', icon: FileText },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
+
+function NavigationLink({ item, compact = false }: { item: (typeof navItems)[number]; compact?: boolean }) {
+  const location = useLocation()
+  const isActive = item.to === '/' ? location.pathname === '/' : location.pathname === item.to
+  const Icon = item.icon
+  return <NavLink key={item.to} to={item.to} end={item.to === '/'} role="tab" aria-selected={isActive} className={cn(
+    'flex items-center rounded-lg border-b-2 border-transparent transition',
+    compact ? 'gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs' : 'gap-2.5 px-3 py-2 text-sm',
+    isActive
+      ? 'border-amber-400 bg-amber-500/15 font-bold text-amber-300 shadow-sm'
+      : 'font-medium text-slate-400 hover:bg-white/5 hover:text-slate-200',
+  )}>
+    <Icon className={compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+    {item.label}
+  </NavLink>
+}
 
 export function AppShell() {
   return (
@@ -33,27 +54,8 @@ export function AppShell() {
           <h1 className="text-lg font-bold" style={{ color: 'var(--brand)' }}>ArchAI</h1>
         </div>
 
-        <nav className="space-y-1">
-          {navItems.map((item) => {
-            const Icon = item.icon
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition',
-                    isActive
-                      ? 'text-amber-700 dark:text-amber-400'
-                      : 'hover:bg-black/5 dark:hover:bg-white/5',
-                  )
-                }
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </NavLink>
-            )
-          })}
+        <nav className="space-y-1" role="tablist" aria-label="ArchAI sections">
+          {navItems.map((item) => <NavigationLink key={item.to} item={item} />)}
         </nav>
 
         <div className="mt-auto pt-6 text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -62,38 +64,18 @@ export function AppShell() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b px-6 py-3" style={{ borderColor: 'var(--card-border)', background: 'var(--surface)' }}>
+        <header className="flex items-center border-b px-6 py-3" style={{ borderColor: 'var(--card-border)', background: 'var(--surface)' }}>
           <div className="lg:hidden">
             <h1 className="text-lg font-bold" style={{ color: 'var(--brand)' }}>ArchAI</h1>
           </div>
           <div className="hidden lg:block">
             <h2 className="text-base font-semibold">Design room</h2>
           </div>
-          <ThemeToggle />
         </header>
 
         <div className="flex lg:hidden">
-          <nav className="flex gap-1 overflow-x-auto px-4 py-2">
-            {navItems.map((item) => {
-              const Icon = item.icon
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition',
-                      isActive
-                        ? 'text-amber-700 dark:text-amber-400'
-                        : 'hover:bg-black/5 dark:hover:bg-white/5',
-                    )
-                  }
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {item.label}
-                </NavLink>
-              )
-            })}
+          <nav className="flex gap-1 overflow-x-auto px-4 py-2" role="tablist" aria-label="ArchAI sections">
+            {navItems.map((item) => <NavigationLink key={item.to} item={item} compact />)}
           </nav>
         </div>
 

@@ -14,6 +14,7 @@ import {
 } from 'recharts'
 import { reweightArchitectures } from '../../lib/api'
 import { formatMetricName } from '../../lib/utils'
+import { chartTheme } from '../../lib/chartTheme'
 import type {
   ComparisonResult,
   ArchitectureScorecard,
@@ -33,6 +34,7 @@ const METRICS = [
 const DEFAULT_WEIGHTS: Record<string, number> = Object.fromEntries(
   METRICS.map((m) => [m, 1.0]),
 )
+const WEIGHT_STORAGE_KEY = 'archai-insight-weights'
 
 const PRESETS: { label: string; weights: Record<string, number> }[] = [
   {
@@ -84,6 +86,8 @@ export function WhatIfPlayground({ comparison, onRankingChange }: WhatIfPlaygrou
 
   const fetchReweighted = useCallback(
     async (currentWeights: Record<string, number>) => {
+      window.localStorage.setItem(WEIGHT_STORAGE_KEY, JSON.stringify(currentWeights))
+      window.dispatchEvent(new CustomEvent('archai:weights-changed', { detail: currentWeights }))
       setIsPending(true)
       try {
         const result = await reweightArchitectures({
@@ -218,12 +222,12 @@ export function WhatIfPlayground({ comparison, onRankingChange }: WhatIfPlaygrou
           <div className="h-[320px]">
             <ResponsiveContainer>
               <RadarChart data={radarData}>
-                <PolarGrid />
+                <PolarGrid stroke={chartTheme.grid} />
                 <PolarAngleAxis
                   dataKey="metric"
-                  tick={{ fill: 'currentColor', fontSize: 10 }}
+                  tick={{ fill: chartTheme.axis, fontSize: 10 }}
                 />
-                <Tooltip />
+                <Tooltip {...chartTheme.tooltip} />
                 {rankedScorecards.map((sc, index) => (
                   <Radar
                     key={sc.architecture_id}
@@ -244,14 +248,16 @@ export function WhatIfPlayground({ comparison, onRankingChange }: WhatIfPlaygrou
           <div className="h-[320px]">
             <ResponsiveContainer>
               <BarChart data={barData} layout="vertical" margin={{ left: 20 }}>
-                <XAxis type="number" domain={[0, 10]} tick={{ fontSize: 11 }} />
+                <XAxis type="number" domain={[0, 10]} stroke={chartTheme.axis} tickLine={{ stroke: chartTheme.axis }} tick={{ fill: chartTheme.axis, fontSize: 11 }} />
                 <YAxis
                   type="category"
                   dataKey="name"
                   width={120}
-                  tick={{ fontSize: 11 }}
+                  stroke={chartTheme.axis}
+                  tickLine={{ stroke: chartTheme.axis }}
+                  tick={{ fill: chartTheme.axis, fontSize: 11 }}
                 />
-                <Tooltip />
+                <Tooltip {...chartTheme.tooltip} />
                 <Bar dataKey="score" radius={[0, 4, 4, 0]}>
                   {barData.map((_, index) => (
                     <Cell key={index} fill={COLORS[index % COLORS.length]} />

@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -184,6 +185,130 @@ class CriteriaWeights(BaseModel):
     weights: dict[str, float] = Field(default_factory=dict)
 
 
+class RequirementAnalysis(BaseModel):
+    """Minimal entity analysis consumed by deterministic insight engines."""
+
+    detected_entities: list[str] = Field(default_factory=list)
+
+
+class ProjectConstraints(BaseModel):
+    """Project inputs used by the deterministic budget estimator."""
+
+    team_size: int = Field(ge=1)
+    budget_level: Literal["low", "medium", "high"] = "medium"
+    expected_scale: str = "medium"
+    timeline_weeks: int = Field(default=12, ge=1)
+
+
+class TeamDefinition(BaseModel):
+    name: str
+    member_count: int = Field(ge=1)
+
+
+class RoleDefinition(BaseModel):
+    role_name: str
+    description: str
+    suggested_percentage: float = Field(ge=0, le=1)
+    min_headcount: int = Field(ge=0)
+    essential: bool
+
+
+class RoleRecommendation(BaseModel):
+    role_name: str
+    description: str
+    recommended_headcount: int = Field(ge=0)
+    rationale: str
+
+
+class TeamFitPlan(BaseModel):
+    architecture_id: str
+    total_team_size: int = Field(ge=1)
+    roles: list[RoleRecommendation] = Field(default_factory=list)
+    coverage_warning: str | None = None
+
+
+class OwnershipSuggestion(BaseModel):
+    component: str
+    suggested_team: str
+    reason: str
+
+
+class FrictionPoint(BaseModel):
+    description: str
+    severity: Literal["low", "medium", "high"]
+    affected_components: list[str] = Field(default_factory=list)
+    affected_teams: list[str] = Field(default_factory=list)
+
+
+class ConwayFitResult(BaseModel):
+    fit_score: float = Field(ge=0, le=10)
+    team_fit_plan: TeamFitPlan
+    ownership_mapping: list[OwnershipSuggestion] = Field(default_factory=list)
+    friction_points: list[FrictionPoint] = Field(default_factory=list)
+    summary: str
+
+
+class ConwayFitRequest(BaseModel):
+    architecture: ArchitectureOption
+    entities: list[str] = Field(default_factory=list)
+    constraints: ProjectConstraints
+
+
+class TwinCaseStudy(BaseModel):
+    id: str
+    company: str
+    architecture_id: str
+    score_vector: dict[str, int] = Field(default_factory=dict)
+    notable_services: list[str] = Field(default_factory=list)
+    summary: str
+    lesson: str
+    source_note: str
+
+
+class TwinMatch(BaseModel):
+    case_study: TwinCaseStudy
+    similarity_score: float = Field(ge=0, le=100)
+    overlap_services: list[str] = Field(default_factory=list)
+    rationale: str
+
+
+class TwinMatchRequest(BaseModel):
+    comparison_matrix: dict[str, dict[str, int]]
+    recommended_architecture_id: str
+    deployment_stack: list[str] = Field(default_factory=list)
+    weights: dict[str, float] | None = None
+
+
+class BudgetLineItem(BaseModel):
+    label: str
+    monthly_cost_usd: float = Field(ge=0)
+    category: Literal["infrastructure", "team", "tooling"]
+
+
+class ScaleBudget(BaseModel):
+    scale_tier: str
+    total_monthly_usd: float = Field(ge=0)
+    line_items: list[BudgetLineItem] = Field(default_factory=list)
+
+
+class BudgetEstimate(BaseModel):
+    architecture_id: str
+    budgets_by_scale: list[ScaleBudget] = Field(default_factory=list)
+    assumptions: list[str] = Field(default_factory=list)
+
+
+class BudgetEstimateRequest(BaseModel):
+    architecture: ArchitectureOption
+    deployment_stack: list[str] = Field(default_factory=list)
+    constraints: ProjectConstraints
+
+
+class BudgetCompareRequest(BaseModel):
+    architectures: list[ArchitectureOption] = Field(min_length=1)
+    deployment_stacks: dict[str, list[str]] = Field(default_factory=dict)
+    constraints: ProjectConstraints
+
+
 class ArchitectureDecisionRecord(BaseModel):
     """Immutable snapshot of a single architectural decision.
 
@@ -334,4 +459,3 @@ class WorkspaceResponse(BaseModel):
     adr: ArchitectureDecisionRecord | None = None
     created_at: datetime
     updated_at: datetime
-

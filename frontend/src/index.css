@@ -5,31 +5,16 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
-  --bg: #fafafa;
-  --surface: #ffffff;
-  --surface-strong: #f5f5f5;
-  --card-border: #e5e5e5;
-  --text: #171717;
-  --text-muted: #737373;
-  --brand: #b45309;
-  --brand-strong: #92400e;
-  --brand-soft: #fef3c7;
-  --success: #16a34a;
-  --danger: #dc2626;
-}
-
-.dark {
   color-scheme: dark;
-  --bg: #0a0a0a;
-  --surface: #171717;
-  --surface-strong: #1a1a1a;
-  --card-border: #262626;
-  --text: #f5f5f5;
-  --text-muted: #a3a3a3;
+  --bg: #0b1120;
+  --surface: #131c2d;
+  --surface-strong: #1b263b;
+  --card-border: #334155;
+  --text: #f8fafc;
+  --text-muted: #a8b3c7;
   --brand: #f59e0b;
   --brand-strong: #fbbf24;
-  --brand-soft: #451a03;
+  --brand-soft: #422006;
   --success: #22c55e;
   --danger: #ef4444;
 }
@@ -130,6 +115,25 @@ textarea {
   .diagram-canvas svg {
     width: 100%;
     height: auto;
+  }
+
+  .diagram-canvas svg .edgePath .path,
+  .diagram-canvas svg .flowchart-link,
+  .diagram-canvas svg .relation {
+    stroke: #cbd5e1 !important;
+  }
+
+  .diagram-canvas svg marker path,
+  .diagram-canvas svg .marker {
+    fill: #cbd5e1 !important;
+    stroke: #cbd5e1 !important;
+  }
+
+  .diagram-canvas svg text,
+  .diagram-canvas svg .label,
+  .diagram-canvas svg .nodeLabel {
+    fill: #f8fafc !important;
+    color: #f8fafc !important;
   }
 
   @keyframes blast-ripple {

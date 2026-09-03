@@ -1,7 +1,6 @@
 import { Copy, Download } from 'lucide-react'
 import mermaid from 'mermaid'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useTheme } from '../../hooks/useTheme'
 import { downloadBlob } from '../../lib/utils'
 import type { DiagramArtifact } from '../../types/api'
 
@@ -15,14 +14,28 @@ export function MermaidDiagram({ artifact }: MermaidDiagramProps) {
   const [svg, setSvg] = useState('')
   const [error, setError] = useState('')
   const [showSource, setShowSource] = useState<'hidden' | 'mermaid' | 'plantuml'>('hidden')
-  const { theme } = useTheme()
   const diagramId = useRef(`diagram-${++diagramCounter}`)
 
   const renderDiagram = useCallback(async () => {
     try {
       mermaid.initialize({
         startOnLoad: false,
-        theme: 'base',
+        theme: 'dark',
+        themeVariables: {
+          background: '#1b263b',
+          primaryColor: '#1e293b',
+          primaryTextColor: '#f8fafc',
+          primaryBorderColor: '#94a3b8',
+          secondaryColor: '#172554',
+          tertiaryColor: '#1f2937',
+          lineColor: '#cbd5e1',
+          edgeLabelBackground: '#131c2d',
+          nodeBorder: '#94a3b8',
+          clusterBkg: '#1e293b',
+          clusterBorder: '#64748b',
+          textColor: '#f8fafc',
+          mainBkg: '#1e293b',
+        },
         securityLevel: 'loose',
         htmlLabels: true,
       })
@@ -35,7 +48,7 @@ export function MermaidDiagram({ artifact }: MermaidDiagramProps) {
       console.error('Mermaid render error:', err)
       setError(`Mermaid error: ${err instanceof Error ? err.message : 'unknown'}`)
     }
-  }, [artifact.mermaid, theme])
+  }, [artifact.mermaid])
 
   useEffect(() => {
     setSvg('')
@@ -61,7 +74,7 @@ export function MermaidDiagram({ artifact }: MermaidDiagramProps) {
         URL.revokeObjectURL(url)
         return
       }
-      context.fillStyle = '#ffffff'
+      context.fillStyle = '#131c2d'
       context.fillRect(0, 0, canvas.width, canvas.height)
       context.drawImage(image, 0, 0, canvas.width, canvas.height)
       canvas.toBlob((blob) => {
