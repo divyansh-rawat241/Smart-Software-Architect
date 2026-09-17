@@ -30,48 +30,44 @@ export function ArchitectureFlow({ architecture, whyHref, onAdd, onEdit, onDelet
       <div className="space-y-3">
         {architecture.components.map((component, index) => (
           <div
-            key={component.name}
+            key={`${architecture.id}-${index}`}
             className="editor-row items-start p-3"
             style={{ borderColor: 'var(--card-border)' }}
           >
-            <div className="flex items-start gap-3">
-              <div className="id-badge">CMP-{String(index + 1).padStart(2, '0')}</div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-2">
-                  <h4 className="font-medium">{component.name}</h4>
-                  {onEdit && onDelete ? (
-                    <div className="row-actions">
-                      {onAsk ? <button type="button" className="icon-button" title="Ask AI about component" aria-label={`Ask AI about ${component.name}`} onClick={() => onAsk(component, index)}><Sparkles className="h-3.5 w-3.5" /></button> : null}
-                      <button type="button" className="icon-button" title="Edit component" aria-label={`Edit ${component.name}`} onClick={() => onEdit(component, index)}><Edit3 className="h-3.5 w-3.5" /></button>
-                      <button type="button" className="icon-button danger-hover" title="Delete component" aria-label={`Delete ${component.name}`} onClick={() => onDelete(component, index)}><Trash2 className="h-3.5 w-3.5" /></button>
-                    </div>
-                  ) : null}
-                </div>
-                <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
-                  {component.responsibility}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {component.technologies.map((technology) => (
-                    <span
-                      key={technology}
-                      className="rounded border px-1.5 py-0.5 text-xs"
-                      style={{ borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}
-                    >
-                      {technology}
-                    </span>
-                  ))}
-                </div>
-                {whyHref && (
-                  <Link
-                    to={whyHref(component)}
-                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-amber-300 hover:text-amber-200"
+            <div className="id-badge">CMP-{String(index + 1).padStart(3, '0')}</div>
+            <div className="min-w-0 flex-1">
+              <h4 className="font-medium" style={{ overflowWrap: 'anywhere' }}>{component.name}</h4>
+              <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
+                {component.responsibility}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1">
+                {component.technologies.map((technology) => (
+                  <span
+                    key={technology}
+                    className="rounded border px-1.5 py-0.5 text-xs"
+                    style={{ borderColor: 'var(--card-border)', color: 'var(--text-muted)' }}
                   >
-                    <CircleHelp className="h-3.5 w-3.5" />
-                    Why does this exist?
-                  </Link>
-                )}
+                    {technology}
+                  </span>
+                ))}
               </div>
+              {whyHref && (
+                <Link
+                  to={whyHref(component)}
+                  className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-amber-300 hover:text-amber-200"
+                >
+                  <CircleHelp className="h-3.5 w-3.5" />
+                  Why does this exist?
+                </Link>
+              )}
             </div>
+            {onEdit && onDelete ? (
+              <div className="row-actions">
+                {onAsk ? <button type="button" className="icon-button" title="Ask AI about component" aria-label={`Ask AI about ${component.name}`} onClick={() => onAsk(component, index)}><Sparkles className="h-3.5 w-3.5" /></button> : null}
+                <button type="button" className="icon-button" title="Edit component" aria-label={`Edit ${component.name}`} onClick={() => onEdit(component, index)}><Edit3 className="h-3.5 w-3.5" /></button>
+                <button type="button" className="icon-button danger-hover" title="Delete component" aria-label={`Delete ${component.name}`} onClick={() => onDelete(component, index)}><Trash2 className="h-3.5 w-3.5" /></button>
+              </div>
+            ) : null}
           </div>
         ))}
       </div>

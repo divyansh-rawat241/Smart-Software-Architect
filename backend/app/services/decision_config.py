@@ -64,7 +64,7 @@ ARCHITECTURE_METRIC_DEFINITIONS: dict[str, str] = {
     "deployment_complexity": "Effort and risk of releasing and rolling back changes (lower raw is better).",
     "learning_curve": "Ramp-up burden for the team to become productive (lower raw is better).",
     "development_time": "Time to first production release with the current team (lower raw is better).",
-    "fault_isolation": "Blast-radius containment when a component fails.",
+    "fault_isolation": "Outage containment when a component fails.",
     "operational_complexity": "Day-to-day burden of running, observing, and scaling the system (lower raw is better).",
 }
 
@@ -116,7 +116,11 @@ PRECEDENT_SIMILARITY_WEIGHTS = {
 # incompatible domain can never present as a strong precedent.
 PRECEDENT_DOMAIN_COMPATIBILITY_THRESHOLD = 40.0
 PRECEDENT_INCOMPATIBLE_INDUSTRY_CAP = 25.0
-PRECEDENT_WEAK_DOMAIN_OVERALL_CAP = 40.0
+# A precedent sharing zero domain evidence (no direct overlap and no shared
+# taxonomy group) is capped harder: stack resemblance alone must never crown
+# an unrelated company the top match. Domain-bearing matches always sort
+# above these, so this cap only settles order among the unrelated.
+PRECEDENT_ZERO_DOMAIN_OVERALL_CAP = 25.0
 
 # Used for compact, user-facing confidence rather than a misleading single score.
 CONFIDENCE_THRESHOLDS = {

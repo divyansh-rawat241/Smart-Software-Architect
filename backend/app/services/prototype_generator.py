@@ -207,8 +207,8 @@ class PrototypeGenerator:
             PrototypeComponent(
                 id="PROTO-COMP-OVERVIEW",
                 component_type="hero",
-                title=title,
-                description=requirements.summary,
+                title=self._sentence(title, 120),
+                description=self._sentence(requirements.summary, 400),
                 items=items,
                 source_requirement_ids=requirement_ids,
             )
@@ -283,7 +283,9 @@ class PrototypeGenerator:
             id=f"PROTO-COMP-{self._slug(group)}",
             component_type=component_type,
             title=name,
-            description=" ".join(self._sentence(text, 160) for text in texts[:3]),
+            description=self._sentence(
+                " ".join(self._sentence(text, 160) for text in texts[:3]), 400
+            ),
             fields=fields,
             items=[self._sentence(text, 110) for text in texts[:6]],
             actions=actions,

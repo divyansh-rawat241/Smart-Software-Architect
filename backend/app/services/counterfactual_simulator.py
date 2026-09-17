@@ -14,7 +14,7 @@ from app.schemas.domain import (
     RequirementModel,
     WorkspaceResponse,
 )
-from app.services.blast_radius_engine import simulate_failure
+from app.services.outage_simulation_engine import simulate_failure
 from app.services.causal_graph import COMPONENT_TYPES, CausalGraphService
 from app.services.comparison_engine import ComparisonEngine
 from app.services.conway_law_engine import check_fit

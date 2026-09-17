@@ -770,7 +770,7 @@ export interface ComponentStatus {
   reason?: string | null
 }
 
-export interface BlastRadiusResult {
+export interface OutageSimulationResult {
   failed_component: string
   architecture_id: string
   statuses: ComponentStatus[]
@@ -778,7 +778,7 @@ export interface BlastRadiusResult {
   severity_score: number
 }
 
-export interface BlastRadiusRequest {
+export interface OutageSimulationRequest {
   architecture: ArchitectureOption
   failed_component: string
   comparison_matrix: Record<string, Record<string, number>>
@@ -793,12 +793,12 @@ export interface ResilienceRecommendation {
 }
 
 export interface ResilienceRecommendationsRequest {
-  blast_result: BlastRadiusResult
+  outage_result: OutageSimulationResult
   architecture: ArchitectureOption
 }
 
 export interface ApplyMitigationsRequest {
-  blast_result: BlastRadiusResult
+  outage_result: OutageSimulationResult
   selected_mitigation_ids: string[]
   architecture: ArchitectureOption
 }

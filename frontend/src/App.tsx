@@ -5,7 +5,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { RequirementWizardPage } from './pages/RequirementWizardPage'
 import { ArchitectureStudioPage } from './pages/ArchitectureStudioPage'
 import { ComparisonPage } from './pages/ComparisonPage'
-import { BlastRadiusPage } from './pages/BlastRadiusPage'
+import { SimulateOutagePage } from './pages/SimulateOutagePage'
 import { DiagramsPage } from './pages/DiagramsPage'
 import { DocsPage } from './pages/DocsPage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -34,7 +34,7 @@ function App() {
           <Route path="/prototype" element={<PrototypePage />} />
           <Route path="/causal-graph" element={<CausalGraphPage />} />
           <Route path="/comparison" element={<ComparisonPage />} />
-          <Route path="/blast-radius" element={<BlastRadiusPage />} />
+          <Route path="/simulate-outage" element={<SimulateOutagePage />} />
           <Route path="/risk-detector" element={<RiskDetectorPage />} />
           <Route path="/team-fit" element={<TeamFitPage />} />
           <Route path="/industry-twins" element={<IndustryTwinsPage />} />

@@ -223,7 +223,7 @@ ArchAI scores each architecture on 12 metrics:
 | Deployment Complexity | How hard it is to deploy |
 | Learning Curve | Team ramp-up time |
 | Development Time | Speed to first release |
-| Fault Isolation | Blast radius of failures |
+| Fault Isolation | Outage impact of failures |
 | Operational Complexity | Day-to-day management overhead |
 
 Weights are adjusted based on the project's scale profile:

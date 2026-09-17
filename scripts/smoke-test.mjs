@@ -290,7 +290,7 @@ async function main() {
 
   const failedComponent = recommended.components[0]?.name
   assert(failedComponent, 'Recommended architecture did not contain components')
-  const blastResult = await request('/analysis/blast-radius', {
+  const outageResult = await request('/analysis/simulate-outage', {
     method: 'POST',
     body: JSON.stringify({
       architecture: recommended,
@@ -299,30 +299,30 @@ async function main() {
     }),
   })
   assert(
-    blastResult.failed_component === failedComponent &&
-      blastResult.statuses.length === recommended.components.length,
-    'Blast-radius simulation returned an invalid result',
+    outageResult.failed_component === failedComponent &&
+      outageResult.statuses.length === recommended.components.length,
+    'Outage simulation returned an invalid result',
   )
 
   const mitigations = await request('/analysis/resilience-recommendations', {
     method: 'POST',
-    body: JSON.stringify({ blast_result: blastResult, architecture: recommended }),
+    body: JSON.stringify({ outage_result: outageResult, architecture: recommended }),
   })
   assert(mitigations.length > 0, 'No resilience recommendations were returned')
 
-  const mitigatedResult = await request('/analysis/blast-radius/apply-mitigations', {
+  const mitigatedResult = await request('/analysis/simulate-outage/apply-mitigations', {
     method: 'POST',
     body: JSON.stringify({
-      blast_result: blastResult,
+      outage_result: outageResult,
       selected_mitigation_ids: [mitigations[0].id],
       architecture: recommended,
     }),
   })
   assert(
-    mitigatedResult.severity_score <= blastResult.severity_score,
-    'Applying a mitigation increased blast-radius severity',
+    mitigatedResult.severity_score <= outageResult.severity_score,
+    'Applying a mitigation increased outage severity',
   )
-  log('Blast radius and mitigations', `${blastResult.severity_score} -> ${mitigatedResult.severity_score}`)
+  log('Simulate outage and mitigations', `${outageResult.severity_score} -> ${mitigatedResult.severity_score}`)
 
   const projectConstraints = {
     team_size: 6,

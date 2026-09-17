@@ -29,6 +29,7 @@ from app.services.assistant_intel import (
     normalize_requirement_text,
     strip_politeness,
     strip_query_noise,
+    strip_trailing_politeness,
     truncate,
 )
 
@@ -1077,8 +1078,8 @@ class ArchitectureAssistantService:
             re.IGNORECASE,
         )
         if action is None and actor_rename:
-            old_name = actor_rename.group("old").strip(" .!?\"'")
-            new_name = actor_rename.group("new").strip(" .!?\"'")
+            old_name = strip_trailing_politeness(actor_rename.group("old"))
+            new_name = strip_trailing_politeness(actor_rename.group("new"))
             index = next(
                 (
                     index
@@ -1286,12 +1287,39 @@ class ArchitectureAssistantService:
             auto_apply = False
 
         actor_add = re.fullmatch(
-            r"(?:please\s+)?add\s+(?:an?\s+)?actor(?:\s+(?:called|named))?\s+(?P<name>.+)",
+            r"(?:please\s+)?(?:add|create)\s+(?:an?\s+)?"
+            r"(?:(?:new|another|additional)\s+)?actor"
+            r"(?:\s+(?:called|named))?\s+(?P<name>.+)",
             message,
             re.IGNORECASE,
         )
+        actor_add_bare = re.fullmatch(
+            r"(?:please\s+)?(?:add|create)\s+(?:an?\s+)?"
+            r"(?:(?:new|another|additional)\s+)?actor"
+            r"(?:\s+(?:called|named))?\s*",
+            message,
+            re.IGNORECASE,
+        )
+        if action is None and actor_add is None and actor_add_bare is not None:
+            # "add a new actor" with no name used to fall through to the model
+            # and come back as a timeout with nothing prepared. Ask instead.
+            return ArchitectureChatResponse(
+                type="question",
+                answer=(
+                    "Which actor should I add? Reply with the actor name — "
+                    "for example, 'add actor Dispatcher'."
+                ),
+            )
         if action is None and actor_add:
-            name = actor_add.group("name").strip(" .!?")
+            name = strip_trailing_politeness(actor_add.group("name"))
+            if not name:
+                return ArchitectureChatResponse(
+                    type="question",
+                    answer=(
+                        "Which actor should I add? Reply with the actor name — "
+                        "for example, 'add actor Dispatcher'."
+                    ),
+                )
             if any(actor.name.casefold() == name.casefold() for actor in workspace.requirements.actors):
                 return ArchitectureChatResponse(type="question", answer=f"Actor {name} already exists.")
             action = ProjectAction(

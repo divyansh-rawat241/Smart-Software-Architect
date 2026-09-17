@@ -8,6 +8,8 @@ Ollama is disabled by conftest, so these exercise the deterministic path.
 from app.services.conway_law_engine import suggest_roles
 from app.services.domain_inference import (
     cluster_entities,
+    extract_actors,
+    extract_entities,
     normalize_constraint_statements,
     payment_evidence_level,
 )
@@ -336,3 +338,218 @@ def test_conway_staffing_totals_match_team_size():
         )
         assert plan.total_team_size == size
         assert sum(role.recommended_headcount for role in plan.roles) == size
+
+
+FLEET_BRIEF_TEXT = (
+    "Build an ambulance dispatch platform for emergency response. "
+    "Ambulances arrive at hospitals quickly and patients need live updates. "
+    "Vehicles need live GPS tracking as operators grow the fleet across the city. "
+    "Dispatchers assign vehicles to emergencies and paramedics confirm arrivals. "
+    "The system must handle sensitive patient data with strict privacy controls."
+)
+
+
+def test_entity_cleanliness_drops_verbs_and_state_words():
+    entities = extract_entities(FLEET_BRIEF_TEXT, limit=12)
+    assert "arrive" not in entities
+    assert "arrival" not in entities
+    assert "live" not in entities
+    assert "grow" not in entities
+    assert "growth" not in entities
+
+
+def test_overlapping_vehicle_terms_dedupe_to_specific():
+    entities = extract_entities(FLEET_BRIEF_TEXT, limit=12)
+    assert not ({"vehicle", "ambulance"} <= set(entities))
+    assert "ambulance" in entities
+
+
+def test_vehicle_only_brief_keeps_vehicle():
+    entities = extract_entities(
+        "Delivery vehicles carry parcels across the city. "
+        "Drivers confirm deliveries and managers review vehicle performance.",
+        limit=8,
+    )
+    assert "vehicle" in entities
+
+
+def test_actor_sanitization_strips_sensitive_modifier():
+    actors = dict(extract_actors(FLEET_BRIEF_TEXT, limit=12))
+    assert "Sensitive Patient" not in actors
+    assert "Patient" in actors
+
+
+def _fleet_workspace(client, constraint):
+    response = client.post(
+        "/api/v1/workspaces",
+        json={
+            "title": "City Ambulance Dispatch",
+            "description": (
+                "Build an ambulance dispatch platform for emergency response. "
+                "Ambulances arrive at hospitals quickly and dispatchers assign "
+                "vehicles to emergencies. Provide GPS tracking of fleet locations "
+                "with route optimization and routing."
+            ),
+            "business_context": "Coordinate emergency medical transport across the metro area.",
+            "constraints": [constraint],
+        },
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+def test_fleet_entities_have_no_verbs_or_duplicates(client):
+    workspace = _fleet_workspace(client, "The service must be always available.")
+    names = {
+        entity["name"].casefold()
+        for entity in workspace["requirements"]["domain_entities"]
+    }
+    assert not (names & {"arrive", "arrival", "live", "grow", "growth"})
+    assert not ({"vehicle", "ambulance"} <= names)
+
+
+def test_high_availability_markers_require_multi_region_failover(client):
+    for constraint in (
+        "The service must be always available.",
+        "The service must operate 24/7 without interruption.",
+        "The platform must maintain 99.99% availability.",
+    ):
+        workspace = _fleet_workspace(client, constraint)
+        deployment = workspace["deployment_plan"]
+        assert len(deployment["regions"]) >= 2, constraint
+        assert "Single primary region" not in deployment["regions"], constraint
+        assert deployment["failover_mode"] != "zonal redundancy", constraint
+        availability = (deployment["availability_configuration"] or "").casefold()
+        assert "failover" in availability and "region" in availability, constraint
+
+
+def test_geospatial_brief_selects_postgis(client):
+    workspace = _fleet_workspace(client, "The service must be always available.")
+    design = workspace["database_design"]
+    assert "PostGIS" in design["database_engine"]
+    assert "postgis" in design["sql_schema"].casefold()
+    assert any("PostGIS" in note for note in design["normalization_notes"])
+
+
+def test_non_geospatial_brief_stays_plain_postgres(client):
+    response = client.post(
+        "/api/v1/workspaces",
+        json={
+            "title": "TeamFlow Analytics",
+            "description": (
+                "Build a multi-tenant SaaS platform for team collaboration analytics. "
+                "Customers create workspaces, invite members, and build dashboards."
+            ),
+            "business_context": "Self-serve SaaS with monthly releases.",
+            "constraints": [],
+        },
+    )
+    assert response.status_code == 201, response.text
+    design = response.json()["database_design"]
+    assert "PostGIS" not in design["database_engine"]
+
+
+def test_pronouns_never_become_entities():
+    entities = extract_entities(
+        "Drivers get this notification on arrival. "
+        "Review this update before dispatch. "
+        "That alert matters most in that region.",
+        limit=10,
+    )
+    assert "this" not in entities
+    assert "that" not in entities
+    assert "notification" in entities
+
+
+def test_failure_words_never_form_phantom_actors():
+    actors = dict(extract_actors(
+        "Alert operators on loss of sensor data immediately.", limit=8
+    ))
+    assert "Loss Sensor" not in actors
+    assert "Sensor" in actors
+
+
+def test_quantity_phrases_never_become_actors():
+    actors = dict(extract_actors(
+        "The platform must support 1 million registered users.", limit=8
+    ))
+    assert "Million Registered User" not in actors
+    assert "Registered User" not in actors
+
+
+def test_gerund_clauses_never_become_actors():
+    actors = dict(extract_actors(
+        "Plan routes while considering partner capacity.", limit=8
+    ))
+    assert "Considering Partner" not in actors
+
+
+def test_time_words_never_become_entities():
+    entities = extract_entities(
+        "Handle significant traffic during weekends and meal hours.", limit=8
+    )
+    assert "weekend" not in entities
+    assert "hour" not in entities
+
+
+def test_action_verbs_never_become_columns():
+    from app.services.project_signals import _semantic_entity_attributes
+
+    attributes = _semantic_entity_attributes(
+        "customer",
+        "Customers browse products and place orders. "
+        "Order placement must be fast. Customers need support.",
+        ["customer", "order", "product"],
+    )
+    assert not (set(attributes) & {
+        "browse", "place", "placement", "need", "inconsistency",
+    })
+
+
+def test_prepositional_fragments_never_become_actors():
+    actors = dict(extract_actors(
+        "Beds are allocated based on patient severity.", limit=8
+    ))
+    assert "Based Patient" not in actors
+    assert "Patient" in actors
+
+
+def test_integration_verb_phrases_never_become_actors():
+    actors = dict(extract_actors(
+        "The system should integrate with patient monitors.", limit=8
+    ))
+    assert "Integrate With Patient" not in actors
+    assert "Patient" in actors
+
+
+def test_concurrency_metrics_never_become_actors():
+    actors = dict(extract_actors(
+        "Support 10,000 concurrent users.", limit=8
+    ))
+    assert "Concurrent User" not in actors
+
+
+def test_conversational_adjectives_never_become_actors():
+    actors = dict(extract_actors(
+        "Exact device vendors and telemetry protocols are unknown.", limit=8
+    ))
+    assert "Exact Device" not in actors
+
+
+def test_triage_states_collapse_into_the_base_role():
+    actors = dict(extract_actors(
+        "Critical patients should receive priority.", limit=8
+    ))
+    assert "Critical Patient" not in actors
+    assert "Patient" in actors
+
+
+def test_genuine_hospital_roles_survive_sanitization():
+    text = (
+        "Hospital administrators should see bed utilization. "
+        "Doctors and nurses request resources for emergency cases."
+    )
+    actors = dict(extract_actors(text, limit=8))
+    assert "Hospital Administrator" in actors
+    assert "Doctor" in actors
+    assert "Nurse" in actors

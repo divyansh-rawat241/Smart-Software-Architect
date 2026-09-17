@@ -64,6 +64,9 @@ _NON_ENTITY_NOUNS = frozenset(
     operator operators manager managers administrator administrators engineer engineers
     logistic logistics operational operation near real realtime
     status statuses change changes update updates
+    this that these those which what it its
+    weekend weekday morning afternoon evening night midnight noon
+    hour minute second day week month
     """.split()
 )
 
@@ -317,7 +320,14 @@ _INVALID_ACTOR_MODIFIERS = frozenset(
     payment payments solution solutions application applications platform platforms
     system systems software capability capabilities website tool tools module modules
     commerce exchange flow movement
-    secure safely securely safe fast quick easy simple good better best
+    loss losses failure failures lack outage outages leak leakage breach
+    damage corruption interruption prevention risk delay
+    based concurrent exact critical
+    integrate integrates integrating integrated
+    million millions billion billions trillion thousand thousands
+    hundred hundreds dozen lakh lakhs crore crores registered
+    considering including involving regarding concerning
+    secure safely securely safe sensitive confidential private personal fast quick easy simple good better best
     real-time realtime automated automatic seamless reliable scalable
     efficient effective complete accurate robust flexible online digital mobile web
     directly easily automatically manually daily weekly monthly
@@ -331,7 +341,7 @@ _VALID_ROLE_PREFIXES = frozenset(
     field quality logistics dispatch product project cloud data help desk
     regional global corporate central independent external internal third
     local national senior junior chief lead key strategic primary secondary
-    licensed certified registered approved authorized designated dedicated
+    licensed certified approved authorized designated dedicated
     remote onsite partner affiliated contracted service team
     """.split()
 )
@@ -346,6 +356,13 @@ _VALID_ROLE_PREFIXES = frozenset(
 _ROLE_PHRASE_BOUNDARY = re.compile(
     r"\b(?:and|while|but|where|which|who|whom|whose|that|when)\b", flags=re.I
 )
+
+
+def _is_numeric_word(word: str) -> bool:
+    """Whether a modifier is a bare number ("1", "100,000"). Scale quantities
+    ("1 million registered users") describe load, never a participant."""
+    cleaned = word.replace(",", "").replace(".", "")
+    return bool(cleaned) and cleaned.isdigit()
 
 
 def _normalize_role(raw: str) -> str:
@@ -366,6 +383,7 @@ def _normalize_role(raw: str) -> str:
             w0 in _INVALID_ACTOR_MODIFIERS
             or w0_stem in _INVALID_ACTOR_MODIFIERS
             or w0_base in _INVALID_ACTOR_MODIFIERS
+            or _is_numeric_word(w0)
             or w0 in _ENGLISH_STOPWORDS
             or w0 in _PREPOSITIONS
             or w0 in _ACCESS_MECHANISM_TERMS
@@ -472,6 +490,31 @@ _ADJECTIVE_TOPICS = frozenset(
      "hybrid", "independent", "food", "near-real-time", "real-time", "realtime", "high-volume", "low-volume"}
 )
 
+# Verbs and state adjectives that surface inside noun phrases ("arrivals",
+# "live updates", "grow the fleet") but never name persisted records.
+# Candidates are compared in singularized form, so inflections ("arrives",
+# "grows") are covered by their base forms here.
+_VERBAL_NON_ENTITIES = frozenset({"arrive", "arrival", "live", "grow", "growth"})
+
+# Hyponym -> hypernym for everyday fleet words. When both appear as
+# candidates ("ambulance" and "vehicle") they name one concept: keep the
+# specific term and drop the generic one before the limit cut.
+_ENTITY_HYPERNYMS = {
+    "ambulance": "vehicle",
+    "truck": "vehicle",
+    "lorry": "vehicle",
+    "van": "vehicle",
+    "car": "vehicle",
+    "bus": "vehicle",
+    "taxi": "vehicle",
+    "cab": "vehicle",
+    "bike": "vehicle",
+    "bicycle": "vehicle",
+    "motorcycle": "vehicle",
+    "scooter": "vehicle",
+    "trailer": "vehicle",
+}
+
 _MANAGEMENT_PATTERN = re.compile(
     r"\b([a-z][a-z-]*(?:\s+[a-z][a-z-]*){0,1})\s+"
     r"(management|tracking|planning|monitoring|processing|scheduling|analytics|operations)\b",
@@ -528,12 +571,15 @@ def _candidate_entity_scores(source_text: str) -> dict[str, float]:
     for match in _MANAGEMENT_PATTERN.finditer(lower):
         topic = match.group(1).strip()
         topic_words = [word for word in topic.split() if word not in _ENGLISH_STOPWORDS]
-        # Drop leading verbs and scope adjectives: "support global operations"
-        # names no entity, while "supply chain management" does.
+        # Drop leading verbs, scope adjectives, and verb/state words:
+        # "support global operations" names no entity, while
+        # "supply chain management" does.
         while topic_words and (
             topic_words[0] in _ADJECTIVE_TOPICS
             or topic_words[0] in _CAPABILITY_VERBS
             or topic_words[0].rstrip("s") in _CAPABILITY_VERBS
+            or topic_words[0] in _VERBAL_NON_ENTITIES
+            or singularize(topic_words[0]) in _VERBAL_NON_ENTITIES
         ):
             topic_words = topic_words[1:]
         if not topic_words:
@@ -547,7 +593,7 @@ def _candidate_entity_scores(source_text: str) -> dict[str, float]:
         ):
             continue
         head = singularize(topic_words[-1])
-        if head in _NON_ENTITY_NOUNS or len(head) < 3:
+        if head in _NON_ENTITY_NOUNS or head in _VERBAL_NON_ENTITIES or len(head) < 3:
             continue
         if len(topic_words) > 1 and singularize(topic_words[-1]) not in _COMPOUND_KEEP_HEADS:
             identifier = head
@@ -561,7 +607,7 @@ def _candidate_entity_scores(source_text: str) -> dict[str, float]:
     for match in _PLURAL_NOUN_PATTERN.finditer(lower):
         word = match.group(1)
         singular = singularize(word)
-        if singular in _NON_ENTITY_NOUNS or len(singular) < 3:
+        if singular in _NON_ENTITY_NOUNS or singular in _VERBAL_NON_ENTITIES or len(singular) < 3:
             continue
         if singular in _CAPABILITY_VERBS or singular in _PREPOSITIONS:
             continue
@@ -592,8 +638,10 @@ def _candidate_entity_scores(source_text: str) -> dict[str, float]:
         modifier = singularize(match.group(1))
         if (
             modifier not in _NON_ENTITY_NOUNS
+            and modifier not in _ENGLISH_STOPWORDS
             and modifier not in _CAPABILITY_VERBS
             and modifier not in _ADJECTIVE_TOPICS
+            and modifier not in _VERBAL_NON_ENTITIES
         ):
             add(modifier, 2.6)
 
@@ -631,6 +679,7 @@ def _candidate_entity_scores(source_text: str) -> dict[str, float]:
                         or len(singular) < 3
                         or singular in _CAPABILITY_VERBS
                         or singular in _PREPOSITIONS
+                        or singular in _VERBAL_NON_ENTITIES
                     ):
                         continue
                     add(singular, 1.5)
@@ -655,7 +704,12 @@ def _candidate_entity_scores(source_text: str) -> dict[str, float]:
             if not words:
                 continue
             head = singularize(words[-1])
-            if head in _NON_ENTITY_NOUNS or head in _ENUMERATION_ENTITY_BLOCKLIST or len(head) < 3:
+            if (
+                head in _NON_ENTITY_NOUNS
+                or head in _ENUMERATION_ENTITY_BLOCKLIST
+                or head in _VERBAL_NON_ENTITIES
+                or len(head) < 3
+            ):
                 continue
             identifier = head if len(words) == 1 or head not in _COMPOUND_KEEP_HEADS else "_".join(singularize(word) for word in words)
             add(identifier, 2.25)
@@ -704,12 +758,20 @@ def extract_entities(
     ranked = [
         identifier for identifier in ranked
         if identifier not in invalid_exact
+        and identifier not in _VERBAL_NON_ENTITIES
+        and not (set(identifier.split("_")) & (_ENGLISH_STOPWORDS | _NON_ENTITY_NOUNS))
         and not (set(identifier.split("_")) & (_CAPABILITY_VERBS - _EXPLICIT_ENTITY_HEADS))
         and not (
             len(identifier.split("_")) > 1
             and set(identifier.split("_")) & role_tokens
         )
     ]
+    # Overlapping generic/specific pairs name one concept ("vehicle" next to
+    # "ambulance"): keep the specific term, drop the generic one.
+    present = set(ranked)
+    for hyponym, hypernym in _ENTITY_HYPERNYMS.items():
+        if hyponym in present and hypernym in present:
+            ranked.remove(hypernym)
     return ranked[: max(1, limit)]
 
 
@@ -1772,6 +1834,24 @@ def parse_availability_percent(*texts: str | None) -> float | None:
             if 90.0 <= value <= 100.0 and (best is None or value > best):
                 best = value
     return best
+
+
+_HIGH_AVAILABILITY_MARKERS = re.compile(
+    r"always[\s-]*available|always[\s-]*on|24\s*/\s*7|24x7|"
+    r"round[\s-]*the[\s-]*clock|never[\s-]*down|zero[\s-]*downtime|no[\s-]*downtime",
+    flags=re.IGNORECASE,
+)
+
+
+def requires_high_availability(*texts: str | None) -> bool:
+    """Whether the brief demands always-on operation in words, not percent.
+
+    Qualitative markers such as "Always available" or "24/7" carry the same
+    weight as a 99.99%+ numeric SLA: they require multi-region failover,
+    never a single primary region.
+    """
+    combined = " ".join(text for text in texts if text)
+    return bool(_HIGH_AVAILABILITY_MARKERS.search(combined))
 
 
 def parse_region_count(*texts: str | None) -> int | None:

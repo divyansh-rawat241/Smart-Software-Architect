@@ -1,5 +1,5 @@
-import type { Workspace, WorkspaceCreatePayload, ProjectDescriptionAnalyzePayload, ReweightRequest, ExportAdrsRequest, BlastRadiusRequest, CausalGraph, CausalGraphTrace, WorkspaceEditPreview, WorkspaceEditRequest, WorkspaceMutationResponse } from '../types/api'
-import type { ArchitectureScorecard, BlastRadiusResult } from '../types/api'
+import type { Workspace, WorkspaceCreatePayload, ProjectDescriptionAnalyzePayload, ReweightRequest, ExportAdrsRequest, OutageSimulationRequest, CausalGraph, CausalGraphTrace, WorkspaceEditPreview, WorkspaceEditRequest, WorkspaceMutationResponse } from '../types/api'
+import type { ArchitectureScorecard, OutageSimulationResult } from '../types/api'
 import type { ResilienceRecommendationsRequest, ApplyMitigationsRequest, ResilienceRecommendation } from '../types/api'
 import type { ConwayFitRequest, ConwayFitResult, TwinMatch, TwinMatchRequest } from '../types/api'
 import type { ArchitectureChangeProposal, ArchitectureChatRequest, ArchitectureChatResponse, ArchitectureRiskAnalysis, ProjectAction } from '../types/api'
@@ -565,8 +565,8 @@ export async function exportAdrs(payload: ExportAdrsRequest) {
   return response.blob()
 }
 
-export function simulateBlastRadius(payload: BlastRadiusRequest) {
-  return request<BlastRadiusResult>('/analysis/blast-radius', {
+export function simulateOutage(payload: OutageSimulationRequest) {
+  return request<OutageSimulationResult>('/analysis/simulate-outage', {
     method: 'POST',
     body: JSON.stringify(payload),
   })
@@ -580,7 +580,7 @@ export function fetchResilienceRecommendations(payload: ResilienceRecommendation
 }
 
 export function applyMitigations(payload: ApplyMitigationsRequest) {
-  return request<BlastRadiusResult>('/analysis/blast-radius/apply-mitigations', {
+  return request<OutageSimulationResult>('/analysis/simulate-outage/apply-mitigations', {
     method: 'POST',
     body: JSON.stringify(payload),
   })

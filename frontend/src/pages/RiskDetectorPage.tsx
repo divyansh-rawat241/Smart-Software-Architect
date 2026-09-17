@@ -129,9 +129,9 @@ function RiskCard({
 
       <div className="mt-4 flex flex-wrap gap-2 border-t pt-3" style={{ borderColor: 'var(--border-subtle)' }}>
         {component ? (
-          <button type="button" className="button-secondary gap-2" onClick={() => navigate(`/blast-radius?${workspaceQuery}${componentQuery}`)}>
+          <button type="button" className="button-secondary gap-2" onClick={() => navigate(`/simulate-outage?${workspaceQuery}${componentQuery}`)}>
             <Zap className="h-3.5 w-3.5" />
-            View Blast Radius
+            Simulate Outage
           </button>
         ) : null}
         {risk.related_node_ids.length || component ? (

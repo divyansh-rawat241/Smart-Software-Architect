@@ -883,6 +883,23 @@ def strip_politeness(message: str) -> str:
     return stripped
 
 
+TRAILING_POLITENESS = re.compile(
+    r"[\s,]+(?:please|pls|kindly|thanks|thank\s+you|thx)(?:[\s,.!?]+)?$",
+    re.IGNORECASE,
+)
+
+
+def strip_trailing_politeness(value: str) -> str:
+    """Remove a trailing courtesy word from an extracted item name.
+
+    "rename actor Admin to Owner please" names the actor "Owner", not
+    "Owner please". Without this the proposal carries the junk word into the
+    canonical model — and because rename proposals auto-apply, the user sees
+    a wrongly-named actor appear as if the rename had created someone new.
+    """
+    return clean_text(TRAILING_POLITENESS.sub("", str(value))).strip(" .!?\"'")
+
+
 BRIEFING_MARKERS = re.compile(
     # "ev*thing" catches everything / evrything / evreything without a spellchecker.
     r"\bev\w*thing\b|\ball of it\b|\bthe whole (?:project|thing|model)\b|"
@@ -1721,8 +1738,8 @@ class DeterministicAssistant:
         for pattern in RENAME_PATTERNS:
             match = pattern.match(body)
             if match:
-                old_name = clean_text(match.group("old")).strip(" .!?\"'")
-                new_name = clean_text(match.group("new")).strip(" .!?\"'")
+                old_name = strip_trailing_politeness(match.group("old"))
+                new_name = strip_trailing_politeness(match.group("new"))
                 break
         if not old_name or not new_name:
             return None

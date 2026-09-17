@@ -267,7 +267,7 @@ class ArchitectureComponent(BaseModel):
     responsibility: str
     technologies: list[str] = Field(default_factory=list)
     interactions: list[str] = Field(default_factory=list)
-    # Exact component names this component needs at runtime. Blast-radius
+    # Exact component names this component needs at runtime. Outage-simulation
     # analysis follows these edges instead of generic architecture-role maps.
     dependencies: list[str] = Field(default_factory=list)
 
@@ -1224,8 +1224,8 @@ class ComponentStatus(BaseModel):
     reason: str | None = None
 
 
-class BlastRadiusResult(BaseModel):
-    """Deterministic blast-radius simulation result for a component failure.
+class OutageSimulationResult(BaseModel):
+    """Deterministic outage-simulation result for a component failure.
 
     Contains per-component status, a plain-English impact summary, and a
     severity score 0-10. All fields are computed rule-based — no LLM.
@@ -1238,8 +1238,8 @@ class BlastRadiusResult(BaseModel):
     severity_score: float
 
 
-class BlastRadiusRequest(BaseModel):
-    """Payload for the blast-radius simulation endpoint.
+class OutageSimulationRequest(BaseModel):
+    """Payload for the outage-simulation endpoint.
 
     Accepts the target architecture, the component that failed, and the
     comparison matrix (needed for the fault_isolation score).
@@ -1251,7 +1251,7 @@ class BlastRadiusRequest(BaseModel):
 
 
 class ResilienceRecommendation(BaseModel):
-    """A single deterministic mitigation suggestion for reducing blast radius.
+    """A single deterministic mitigation suggestion for reducing outage impact.
 
     Each recommendation maps to a hard-coded entry in the MITIGATION_CATALOG.
     The LLM never decides scores or recommendations — only prose descriptions.
@@ -1267,23 +1267,23 @@ class ResilienceRecommendation(BaseModel):
 class ResilienceRecommendationsRequest(BaseModel):
     """Payload for the resilience-recommendations endpoint.
 
-    Accepts a completed blast radius result and the architecture it was
+    Accepts a completed outage simulation result and the architecture it was
     simulated against. Returns deterministic mitigation suggestions.
     """
 
-    blast_result: BlastRadiusResult
+    outage_result: OutageSimulationResult
     architecture: ArchitectureOption
 
 
 class ApplyMitigationsRequest(BaseModel):
-    """Payload for the blast-radius/apply-mitigations endpoint.
+    """Payload for the simulate-outage/apply-mitigations endpoint.
 
-    Accepts a blast radius result, a list of selected mitigation IDs,
-    and the architecture. Returns a modified blast radius result with
+    Accepts an outage simulation result, a list of selected mitigation IDs,
+    and the architecture. Returns a modified outage simulation result with
     updated statuses and reduced severity score.
     """
 
-    blast_result: BlastRadiusResult
+    outage_result: OutageSimulationResult
     selected_mitigation_ids: list[str]
     architecture: ArchitectureOption
 

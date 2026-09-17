@@ -18,6 +18,7 @@ from app.services.domain_inference import (
     has_global_markers,
     parse_availability_percent,
     parse_region_count,
+    requires_high_availability,
 )
 
 
@@ -52,9 +53,15 @@ class DeploymentGenerator:
         region_count = parse_region_count(
             answers.get("geographic_regions", ""), *non_functional, *constraints
         )
+        # A 99.99%+ numeric SLA or a qualitative always-on marker ("Always
+        # available", "24/7") requires multi-region failover with at least two
+        # regions — never a single primary region.
+        ha_required = (sla is not None and sla >= 99.99) or requires_high_availability(
+            answers.get("sla"), *non_functional, *constraints
+        )
         multi_region = requirements.project_profile.geographic_scope == "global/multi-region" or bool(region_count and region_count > 1) or has_global_markers(
             *non_functional, *constraints
-        )
+        ) or ha_required
         high_scale = requirements.scale_profile == "high-scale"
         realtime = any(
             marker in " ".join(
@@ -95,7 +102,7 @@ class DeploymentGenerator:
         )
 
         # Replicas: 3 when the brief demands zone-level redundancy.
-        if (sla is not None and sla >= 99.99) or high_scale or multi_region:
+        if ha_required or high_scale or multi_region:
             replicas = 3
         else:
             replicas = 2
@@ -151,10 +158,25 @@ class DeploymentGenerator:
                 f"recovery{f' (RTO {rto}, RPO {rpo})' if rto or rpo else ''}."
             )
         elif qualitative_availability and qualitative_availability.casefold() not in {"unknown", "not specified", "no preference"}:
+            if ha_required:
+                availability_configuration = (
+                    f'User-stated availability expectation: "{qualitative_availability}". '
+                    "This requires multi-region failover (at least 2 regions) with "
+                    f"automated failover and tested disaster recovery{f' (RTO {rto}, RPO {rpo})' if rto or rpo else ''}; "
+                    "confirm a measurable SLA/RTO/RPO before claiming an uptime percentage."
+                )
+            else:
+                availability_configuration = (
+                    f'User-stated availability expectation: "{qualitative_availability}". '
+                    "Use zonal redundancy and tested recovery, but confirm a measurable SLA/RTO/RPO "
+                    "before adding regions or claiming an uptime percentage."
+                )
+        elif ha_required:
             availability_configuration = (
-                f'User-stated availability expectation: "{qualitative_availability}". '
-                "Use zonal redundancy and tested recovery, but confirm a measurable SLA/RTO/RPO "
-                "before adding regions or claiming an uptime percentage."
+                "Requirements state always-on operation (always available / 24/7). "
+                "This requires multi-region failover (at least 2 regions) with "
+                f"automated failover and tested disaster recovery{f' (RTO {rto}, RPO {rpo})' if rto or rpo else ''}; "
+                "confirm a measurable SLA/RTO/RPO before claiming an uptime percentage."
             )
         else:
             availability_configuration = (

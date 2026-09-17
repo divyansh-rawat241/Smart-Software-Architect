@@ -18,7 +18,7 @@ from app.services.decision_config import (
     PRECEDENT_DOMAIN_COMPATIBILITY_THRESHOLD,
     PRECEDENT_INCOMPATIBLE_INDUSTRY_CAP,
     PRECEDENT_SIMILARITY_WEIGHTS,
-    PRECEDENT_WEAK_DOMAIN_OVERALL_CAP,
+    PRECEDENT_ZERO_DOMAIN_OVERALL_CAP,
     metric_raw_score,
     metric_utility,
 )
@@ -96,6 +96,8 @@ REFERENCE_CASE_STUDIES: list[TwinCaseStudy] = [
     _case("capital-one", "Capital One", "event-driven", ["Kafka", "AWS Lambda", "DynamoDB", "API Gateway"], "Capital One has publicly presented event-driven cloud architectures built from managed services.", "Managed events can reduce infrastructure work but still need clear contracts and tracing.", "Source note: Capital One developer and cloud conference material."),
     _case("coca-cola", "Coca-Cola", "serverless", ["AWS Lambda", "API Gateway", "DynamoDB"], "Coca-Cola has publicly appeared in AWS material describing serverless API and data workloads.", "Managed functions are effective for variable demand when workload boundaries are small and observable.", "Source note: Public AWS customer-story material.", cost=1, deployment_complexity=1),
     _case("lego", "LEGO", "serverless", ["AWS Lambda", "API Gateway", "DynamoDB", "S3"], "LEGO has publicly discussed using AWS serverless services for selected digital experiences.", "Serverless can let lean teams focus on product work while usage remains variable.", "Source note: Public AWS customer-story and conference material.", scalability=1),
+    _case("fedex", "FedEx", "service-based", ["Kafka", "PostgreSQL", "Kubernetes", "Redis"], "FedEx is widely associated with global parcel logistics, shipment tracking, and fleet telemetry operating at very large scale.", "High-volume tracking and fleet telemetry pay off when many independent operational workflows share one platform.", "Source note: Public FedEx technology and engineering material; no private implementation detail is asserted.", scalability=1, reliability=1),
+    _case("rapidsos", "RapidSOS", "service-based", ["REST", "PostgreSQL", "Redis", "WebRTC"], "RapidSOS publicly documents an emergency-response data platform connecting devices and sensors to emergency dispatch.", "Emergency dispatch benefits from explicit contracts, location provenance, and dependable handoff between responding parties.", "Source note: Public RapidSOS developer and engineering material; no private implementation detail is asserted.", reliability=1, availability=1),
 ]
 
 # Tags intentionally describe only high-level public precedent context.  They
@@ -106,12 +108,12 @@ _CASE_DOMAIN_TAGS: dict[str, list[str]] = {
     "stackoverflow": ["community", "knowledge platform"],
     "shopify": ["commerce", "retail"],
     "atlassian": ["business software", "collaboration", "saas"],
-    "bbc": ["media", "content delivery"],
-    "nhs-digital": ["healthcare", "clinical", "patient", "medical"],
+    "bbc": ["media", "streaming", "broadcast"],
+    "nhs-digital": ["healthcare", "clinical", "patient", "medical", "emergency", "hospital", "ambulance", "paramedic", "dispatch"],
     "canva": ["creative platform", "saas"],
     "monzo": ["banking", "financial services", "payments"],
     "netflix": ["media", "streaming"],
-    "uber": ["mobility", "logistics"],
+    "uber": ["mobility", "logistics", "fleet", "dispatch"],
     "airbnb": ["travel", "marketplace"],
     "amazon": ["commerce", "logistics", "retail"],
     "slack": ["collaboration"],
@@ -120,13 +122,17 @@ _CASE_DOMAIN_TAGS: dict[str, list[str]] = {
     "capital-one": ["banking", "financial services", "payments"],
     "coca-cola": ["manufacturing", "distribution", "consumer goods"],
     "lego": ["consumer goods", "commerce"],
+    "fedex": ["logistics", "fleet", "telemetry", "supply chain"],
+    "rapidsos": ["emergency", "dispatch", "public safety", "telemetry"],
 }
 
 _DOMAIN_TAXONOMY = (
-    {"logistic", "shipment", "parcel", "carrier", "route", "transport", "delivery", "mobility"},
+    {"logistic", "shipment", "parcel", "carrier", "route", "transport", "delivery", "mobility",
+     "fleet", "vehicle", "waste", "municipal", "telemetry", "iot"},
     {"manufacturing", "production", "bottling", "distribution", "supply", "chain", "inventory", "industrial"},
     {"banking", "financial", "payment", "transaction", "ledger", "settlement"},
-    {"healthcare", "clinical", "patient", "medical", "health", "treatment", "pharmacy"},
+    {"healthcare", "clinical", "patient", "medical", "health", "treatment", "pharmacy",
+     "hospital", "emergency", "ambulance", "dispatch", "paramedic", "clinic", "triage"},
     {"commerce", "retail", "marketplace", "store", "order", "catalog"},
     {"media", "streaming", "content", "playback", "video", "broadcast"},
     {"collaboration", "saas", "business", "workspace", "developer"},
@@ -307,11 +313,9 @@ def _domain_similarity(domain: str, domain_signals: list[str], case: TwinCaseStu
     if not project or not precedent:
         return 0.0
     overlap = project & precedent
-    # Related public categories can be a weak match, but never a substitute
-    # for direct domain evidence (manufacturing is not logistics).
     direct = len(overlap) / max(min(len(project), len(precedent)), 1)
     related = any(project & group and precedent & group for group in _DOMAIN_TAXONOMY)
-    return round(min(100.0, direct * 100 + (20.0 if related and not overlap else 0.0)), 1)
+    return round(min(100.0, direct * 100 + (20.0 if related else 0.0)), 1)
 
 
 def _signal_similarity(project_values: list[str], precedent_values: list[str]) -> float:
@@ -459,8 +463,13 @@ def match_twins(
             ) / available_weight,
             1,
         )
-        if not domain_compatible:
-            similarity = min(similarity, PRECEDENT_WEAK_DOMAIN_OVERALL_CAP)
+        if domain_similarity == 0:
+            # No shared domain evidence at all: topology and stack resemblance
+            # alone must not crown an unrelated precedent (a media company
+            # sharing "AWS + PostgreSQL + Redis" is not a public-safety or
+            # logistics precedent). Domain-bearing matches always sort above
+            # these, so the cap only settles order among the unrelated.
+            similarity = min(similarity, PRECEDENT_ZERO_DOMAIN_OVERALL_CAP)
         overlaps = _overlap_services(deployment_stack, case.notable_services)
         shared = f"Shares {', '.join(overlaps)} with {case.company}'s approach" if overlaps else f"No direct stack overlap is modeled with {case.company}'s public stack"
         similar = _similar_metrics(user_row, case)
@@ -492,6 +501,11 @@ def match_twins(
                 f"architecture similarity {architecture_similarity:.0f}/100 reflects topology only and is not industry resemblance."
             )
         )
+        if architecture_similarity >= 80:
+            domain_clause += (
+                f" Architecture Precedent (Topology Match): architecture similarity "
+                f"{architecture_similarity:.0f}/100 is a strong structural precedent for this topology."
+            )
         matches.append(TwinMatch(
             case_study=case,
             similarity_score=similarity,

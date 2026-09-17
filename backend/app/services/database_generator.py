@@ -35,6 +35,15 @@ _TRANSACTIONAL_TOKENS = frozenset(
      "sale", "sales", "checkout"}
 )
 
+# Location/routing language that requires spatial storage and indexing.
+_GEOSPATIAL_MARKERS = (
+    "gps", "postgis", "geofence", "geofencing", "geospatial",
+    "latitude", "longitude", "fleet location", "fleet locations",
+    "vehicle location", "live location", "routing",
+    "route optimization", "route optimisation", "route planning",
+)
+
+
 
 class DatabaseGenerator:
     def generate(self, requirements: RequirementModel) -> DatabaseDesign:
@@ -409,6 +418,11 @@ class DatabaseGenerator:
             "JSONB is reserved for extensible metadata, not for high-cardinality relational joins.",
             "Indexing prioritizes role lookups, status filters, and audit/event retrieval paths.",
         ]
+        if self._needs_postgis(requirements):
+            normalization_notes.append(
+                "PostGIS extension with GiST spatial indexes supports the "
+                "location and routing data in the brief."
+            )
         normalization_notes.extend(pattern_assumptions)
         if any(entity.bounded_context for entity in entities):
             normalization_notes.append(
@@ -433,7 +447,7 @@ class DatabaseGenerator:
                 "Ledger postings are immutable double-entry records: each transaction_id groups balanced debit/credit legs with idempotent writes."
             )
 
-        sql_schema = self._render_sql(entities, relationships)
+        sql_schema = self._render_sql(entities, relationships, postgis=self._needs_postgis(requirements))
         sample_inserts = self._sample_inserts(entities)
 
         # Every table carries an owning bounded context, including curated
@@ -446,7 +460,11 @@ class DatabaseGenerator:
                 )
 
         return DatabaseDesign(
-            database_engine="PostgreSQL",
+            database_engine=(
+                "PostgreSQL with PostGIS extension"
+                if self._needs_postgis(requirements)
+                else "PostgreSQL"
+            ),
             entities=entities,
             relationships=relationships,
             indexes=indexes,
@@ -454,6 +472,19 @@ class DatabaseGenerator:
             sql_schema=sql_schema,
             sample_inserts=sample_inserts,
         )
+
+    def _needs_postgis(self, requirements: RequirementModel) -> bool:
+        """Whether the brief evidences location/routing data needing PostGIS."""
+        text = " ".join([
+            requirements.domain,
+            *requirements.functional_requirements,
+            *requirements.non_functional_requirements,
+            *requirements.constraints,
+            *requirements.data_characteristics,
+            *[hint.name for hint in requirements.domain_entities],
+            *[hint.description for hint in requirements.domain_entities],
+        ]).lower()
+        return any(marker in text for marker in _GEOSPATIAL_MARKERS)
 
     def _auth_evidence(self, requirements: RequirementModel) -> bool:
         return auth_evidence(
@@ -1227,8 +1258,13 @@ class DatabaseGenerator:
         relationships, extra_conflicts = self._drop_contradictory_relationships(relationships)
         conflict_notes = [*conflict_notes, *extra_conflicts]
 
+        postgis = self._needs_postgis(requirements)
         return DatabaseDesign(
-            database_engine="PostgreSQL (architecture recommendation)",
+            database_engine=(
+                "PostgreSQL with PostGIS extension (architecture recommendation)"
+                if postgis
+                else "PostgreSQL (architecture recommendation)"
+            ),
             entities=entities,
             relationships=relationships,
             indexes=self._dedupe(indexes),
@@ -1237,6 +1273,11 @@ class DatabaseGenerator:
                 "Attribute types and relationships are provisional until the open data-model questions are answered.",
                 "Use object storage alongside the relational model if binary or high-volume data requires it.",
                 *(
+                    ["PostGIS extension with GiST spatial indexes supports the "
+                     "location and routing data in the brief."]
+                    if postgis else []
+                ),
+                *(
                     ["Some relationship cardinalities are inferred from workflow structure and should be confirmed."]
                     if assumed_relationships else []
                 ),
@@ -1244,7 +1285,7 @@ class DatabaseGenerator:
                 # know a direction was chosen for them.
                 *conflict_notes,
             ],
-            sql_schema=self._render_sql(entities, relationships),
+            sql_schema=self._render_sql(entities, relationships, postgis=postgis),
             sample_inserts="-- Sample records are intentionally omitted until domain values are confirmed.",
         )
 
@@ -1324,9 +1365,13 @@ class DatabaseGenerator:
         return list(dict.fromkeys(values))
 
     def _render_sql(
-        self, entities: list[DatabaseEntity], relationships: list[DatabaseRelationship]
+        self, entities: list[DatabaseEntity], relationships: list[DatabaseRelationship],
+        *, postgis: bool = False,
     ) -> str:
-        lines = ["CREATE EXTENSION IF NOT EXISTS pgcrypto;", ""]
+        lines = ["CREATE EXTENSION IF NOT EXISTS pgcrypto;"]
+        if postgis:
+            lines.append("CREATE EXTENSION IF NOT EXISTS postgis;")
+        lines.append("")
         relationship_map = {
             ("audit_logs", "actor_id"): "users(id)",
             ("chargers", "station_id"): "stations(id)",

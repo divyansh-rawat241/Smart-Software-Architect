@@ -28,6 +28,61 @@ def project_action(client, workspace, action):
     return response.json()["workspace"]
 
 
+def test_long_brief_text_never_breaks_prototype_generation(client):
+    """The reported failure: a detailed brief produced a summary longer than
+    the prototype hero's 400-character description cap, and the untruncated
+    value failed validation — taking down the entire workspace generation
+    with "workspace could not be generated"."""
+    workspace = create_workspace(
+        client,
+        title="Smart Water Distribution",
+        description=(
+            "Build a smart water distribution platform that monitors reservoir "
+            "levels, pipe pressure, and water quality across municipal zones. "
+            "Operators track leakage alerts and schedule maintenance crews while "
+            "residents report outages through a public portal. The system must "
+            "raise automated alarms for critical events, keep full audit trails "
+            "of valve operations, and stay available around the clock with "
+            "redundant sensing and failover handling for critical events."
+        ),
+    )
+    for screen in workspace["prototype"]["screens"]:
+        assert len(screen["name"]) <= 100, screen["name"]
+        for component in screen["components"]:
+            assert len(component["title"]) <= 120, component["title"]
+            if component["description"] is not None:
+                assert len(component["description"]) <= 400, component["description"]
+
+
+def test_oversized_summary_is_truncated_to_fit_hero_caps():
+    """Unit-level proof: LLM-written summaries are unbounded, so the overview
+    screen must truncate rather than fail validation."""
+    from app.schemas.domain import PrototypeTheme, RequirementModel
+    from app.services.prototype_generator import PrototypeGenerator
+
+    requirements = RequirementModel(
+        summary="Smart Water Distribution " + (
+            "monitors reservoirs, pipe pressure, and quality across zones. "
+        ) * 12,
+        domain="Water Distribution Platform",
+        scale_profile="unknown",
+        functional_requirements=[
+            "Operators track leakage alerts and schedule maintenance crews."
+        ],
+    )
+    assert len(requirements.summary) > 400
+    screen = PrototypeGenerator()._overview_screen(
+        "A very long workspace title " * 8,
+        requirements,
+        [("FR-001", "Operators track leakage alerts.")],
+        [],
+        PrototypeTheme(pattern="monitoring"),
+    )
+    hero = screen.components[0]
+    assert len(hero.title) <= 120
+    assert hero.description is not None and len(hero.description) <= 400
+
+
 def test_prototype_is_domain_specific_interactive_and_traceable(client):
     workspace = create_workspace(
         client,

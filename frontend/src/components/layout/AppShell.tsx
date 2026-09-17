@@ -54,7 +54,7 @@ const navGroups = [
     items: [
       { to: '/comparison', label: 'Comparison', icon: BarChart3 },
       { to: '/risk-detector', label: 'Risk Detector', icon: ShieldAlert },
-      { to: '/blast-radius', label: 'Blast radius', icon: Zap },
+      { to: '/simulate-outage', label: 'Simulate outage', icon: Zap },
       { to: '/team-fit', label: 'Team fit', icon: Users },
       { to: '/industry-twins', label: 'Industry precedents', icon: CloudCog },
     ],
@@ -301,9 +301,6 @@ export function AppShell() {
                 <span className="topbar-domain">{workspace.requirements.domain}</span>
               ) : null}
             </div>
-            {workspace?.business_context ? (
-              <p className="topbar-subtitle">{workspace.business_context}</p>
-            ) : null}
           </div>
           <div className="ml-auto flex min-w-0 items-center gap-2">
             {recommendedScore !== null ? (

@@ -454,3 +454,86 @@ def test_diagrams_are_grounded_in_their_own_domain(project):
     assert any(term in combined for term in DOMAIN_TERMS[key]), key
     for term in FOREIGN_TERMS[key]:
         assert term not in combined, f"{key} diagrams mention {term!r}"
+
+
+# ------------------------------------------- mermaid-safe diagram identifiers
+
+
+def _diagram_design(names, relationships=()):
+    from app.schemas.domain import (
+        DatabaseDesign,
+        DatabaseEntity,
+        DatabaseField,
+        DatabaseRelationship,
+    )
+
+    entities = [
+        DatabaseEntity(
+            name=name,
+            description=f"{name} records.",
+            fields=[
+                DatabaseField(name="id", data_type="UUID", description="Primary key"),
+                DatabaseField(
+                    name="status", data_type="VARCHAR(40)", nullable=True,
+                    description="Lifecycle state",
+                ),
+            ],
+        )
+        for name in names
+    ]
+    return DatabaseDesign(
+        database_engine="PostgreSQL",
+        entities=entities,
+        relationships=list(relationships),
+        indexes=[],
+        normalization_notes=[],
+        sql_schema="",
+        sample_inserts="",
+    )
+
+
+def _diagram_relation(source, target):
+    from app.schemas.domain import DatabaseRelationship
+
+    return DatabaseRelationship(
+        source=source,
+        target=target,
+        relationship="many-to-one",
+        description=f"{source} belongs to {target}.",
+    )
+
+
+def test_er_quotes_reserved_entity_names():
+    """A university brief yields an entity named `class`, and `CLASS {` is a
+    style statement in Mermaid's ER grammar — the whole diagram failed to
+    parse with a syntax error."""
+    from app.services.diagram_generator import DiagramGenerator
+
+    design = _diagram_design(
+        ["student", "class"], [_diagram_relation("class", "student")]
+    )
+    er = DiagramGenerator()._er_diagram(design).mermaid
+    assert '"CLASS" {' in er
+    assert "\n    CLASS {" not in er
+    assert any(
+        '"CLASS"' in line and "||--" in line for line in er.splitlines()
+    ), er
+
+
+def test_class_diagram_sanitizes_unsafe_names():
+    """Parentheses and hashes in `class Order(priority)#1 {` are a lexical
+    error, so hostile entity names must be reduced to bare identifiers that
+    relationships still reference."""
+    from app.services.diagram_generator import DiagramGenerator
+
+    design = _diagram_design(
+        ["student", "order (priority) #1"],
+        [_diagram_relation("order (priority) #1", "student")],
+    )
+    class_diagram = DiagramGenerator()._class_diagram(design).mermaid
+    assert "class Orderpriority1 {" in class_diagram
+    assert "Order(priority)" not in class_diagram
+    assert any(
+        "Orderpriority1" in line and "-->" in line
+        for line in class_diagram.splitlines()
+    ), class_diagram

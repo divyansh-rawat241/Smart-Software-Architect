@@ -460,6 +460,63 @@ def test_renaming_without_naming_a_collection_searches_both(client):
     assert "no actor or domain entity named 'Courier'" in reply["answer"]
 
 
+# ------------------------------------------------------- add-actor phrasings
+# The reported bug: "add a new actor ..." fell through to the model (the word
+# "new" defeated the exact-command grammar) and came back as a timeout notice
+# with nothing prepared.
+
+
+ADD_ACTOR_PHRASINGS = [
+    "add a new actor called Dispatcher",
+    "add a new actor Dispatcher",
+    "add new actor Dispatcher",
+    "add a new actor named Dispatcher",
+    "create an actor called Dispatcher",
+    "can you add a new actor called Dispatcher",
+    "please add a new actor called Dispatcher",
+]
+
+
+@pytest.mark.parametrize("message", ADD_ACTOR_PHRASINGS)
+def test_everyday_add_actor_phrasing_is_deterministic(client, message):
+    workspace = seeded_workspace(client)
+    reply = chat(client, workspace["id"], message)
+    assert reply["type"] == "architecture_change", message
+    action = reply["proposal"]["project_actions"][0]
+    assert action["action"] == "add_actor"
+    assert action["value"]["name"] == "Dispatcher"
+
+
+@pytest.mark.parametrize(
+    "message", ["add a new actor", "add new actor", "add actor", "add an actor"]
+)
+def test_add_actor_without_a_name_asks_instead_of_timing_out(client, message):
+    workspace = seeded_workspace(client)
+    reply = chat(client, workspace["id"], message)
+    assert reply["type"] == "question", message
+    assert reply["proposal"] is None
+    assert "Which actor should I add" in reply["answer"]
+
+
+def test_trailing_please_is_not_part_of_actor_names(client):
+    """The reported bug: "rename actor X to Y please" renamed X to
+    "Y please", which auto-applied and looked like a new actor appeared."""
+    workspace = seeded_workspace(client)
+    reply = chat(client, workspace["id"], "rename actor Patient to Client please")
+    assert reply["type"] == "architecture_change"
+    action = reply["proposal"]["project_actions"][0]
+    assert action["action"] == "update_actor"
+    assert action["target_id"] == "ACTOR-001"
+    assert action["value"]["name"] == "Client"
+
+    workspace = seeded_workspace(client)
+    reply = chat(client, workspace["id"], "add a new actor called Dispatcher please")
+    assert reply["type"] == "architecture_change"
+    action = reply["proposal"]["project_actions"][0]
+    assert action["action"] == "add_actor"
+    assert action["value"]["name"] == "Dispatcher"
+
+
 def test_fallback_explains_itself_and_offers_usable_commands(client, monkeypatch):
     """Even the give-up path must be useful rather than internal jargon."""
     workspace = seeded_workspace(client)

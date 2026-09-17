@@ -13,7 +13,7 @@ from app.services.domain_inference import normalize_constraint_statements, split
 from app.services.recommendation_engine import RecommendationEngine
 from app.services.requirement_analyzer import RequirementAnalyzer
 from app.services.twin_matching_engine import match_twins
-from app.services.blast_radius_engine import simulate_failure
+from app.services.outage_simulation_engine import simulate_failure
 from app.services.workspace_orchestrator import WorkspaceOrchestrator
 from app.services.project_signals import classify_actor
 from app.schemas.domain import (
@@ -829,7 +829,7 @@ def test_transport_brief_keeps_people_integrations_and_domain_operations_separat
     assert all("+ more" not in role.role_name for role in fit.team_fit_plan.roles)
 
 
-def test_blast_radius_follows_explicit_runtime_dependencies():
+def test_outage_simulation_follows_explicit_runtime_dependencies():
     architecture = ArchitectureOption(
         id="service-based",
         name="Dependency-owned services",
@@ -860,3 +860,93 @@ def test_blast_radius_follows_explicit_runtime_dependencies():
     assert statuses["Notification Service"].status == "healthy"
     assert statuses["Event Backbone"].status == "healthy"
     assert "Booking Database" in (statuses["Booking Service"].reason or "")
+
+
+_AMBULANCE_TWIN_MATRIX = {"service-based": {
+    "scalability": 8, "performance": 7, "maintainability": 7,
+    "security": 8, "cost": 5, "reliability": 8, "availability": 9,
+    "deployment_complexity": 4, "learning_curve": 5,
+    "development_time": 6, "fault_isolation": 8,
+    "operational_complexity": 4,
+}}
+
+
+def test_emergency_dispatch_matches_healthcare_and_fleet_precedents():
+    """The reported gap: an Emergency Ambulance Dispatch brief matched no
+    precedent (NHS Digital scored 0% domain similarity) while stack overlap
+    alone promoted unrelated companies. Emergency/healthcare taxonomy terms
+    and fleet case context must connect it to NHS Digital and Uber."""
+    matches = match_twins(
+        comparison_matrix=_AMBULANCE_TWIN_MATRIX,
+        recommended_architecture_id="service-based",
+        deployment_stack=["PostgreSQL", "Redis", "Kafka", "Kubernetes"],
+        domain="Emergency Ambulance Dispatch",
+        domain_signals=[
+            "emergency", "ambulance", "dispatch", "hospital", "paramedic",
+            "fleet", "vehicle", "patient", "gps", "routing",
+        ],
+        capability_signals=[
+            "emergency dispatch", "patient tracking", "clinical notifications",
+            "fleet coordination",
+        ],
+        workload_signals=["high-volume event processing"],
+        data_signals=["PostgreSQL", "location records"],
+        reliability_signals=["high availability", "reliability"],
+        integration_signals=["FHIR API", "event API"],
+        top_n=5,
+    )
+    by_company = {match.case_study.company: match for match in matches}
+    assert {"NHS Digital", "Uber"} <= set(by_company)
+    for company in ("NHS Digital", "Uber"):
+        assert by_company[company].similarity_score > 50, company
+        assert by_company[company].domain_compatible, company
+    # A strong topology match is reported as an architecture precedent,
+    # never crushed by a weak-domain overall cap.
+    assert "Architecture Precedent (Topology Match)" in matches[0].rationale
+    assert matches[0].case_study.company != "BBC"
+
+
+def test_stack_overlap_alone_cannot_crown_an_unrelated_precedent():
+    """A municipal waste system sharing AWS + PostgreSQL + Redis must not
+    rank a media company first: zero domain evidence caps the overall score."""
+    matches = match_twins(
+        comparison_matrix=_AMBULANCE_TWIN_MATRIX,
+        recommended_architecture_id="service-based",
+        deployment_stack=["AWS", "PostgreSQL", "Redis"],
+        domain="Municipal Waste Collection System",
+        domain_signals=["waste", "municipal", "collection", "fleet", "routes"],
+        capability_signals=["tracking", "scheduling", "routing"],
+        workload_signals=["daily route processing"],
+        data_signals=["PostgreSQL", "route records"],
+        reliability_signals=["high availability"],
+        integration_signals=["REST API"],
+        top_n=5,
+    )
+    assert matches[0].case_study.company != "BBC"
+    assert matches[0].domain_similarity and matches[0].domain_similarity > 0
+
+
+def test_food_delivery_prefers_logistics_over_media_broadcaster():
+    """The recurring error: BBC's "content delivery" tag collided with food
+    "delivery" on one token and outranked genuine logistics precedents."""
+    matches = match_twins(
+        comparison_matrix=_AMBULANCE_TWIN_MATRIX,
+        recommended_architecture_id="service-based",
+        deployment_stack=["PostgreSQL", "Redis", "Kafka"],
+        domain="Food Delivery Platform",
+        domain_signals=["food", "delivery", "order", "restaurant", "meal"],
+        capability_signals=["delivery", "tracking", "ordering"],
+        workload_signals=["high-volume order processing"],
+        data_signals=["PostgreSQL", "order records"],
+        reliability_signals=["high availability"],
+        integration_signals=["REST API"],
+        top_n=5,
+    )
+    assert matches[0].case_study.company != "BBC"
+    bbc = next(
+        (match for match in matches if match.case_study.company == "BBC"), None
+    )
+    if bbc is not None:
+        assert bbc.domain_similarity == 0
+    assert matches[0].domain_similarity and matches[0].domain_similarity > 0
+

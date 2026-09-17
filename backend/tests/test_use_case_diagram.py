@@ -253,6 +253,131 @@ def test_one_use_case_can_have_multiple_confirmed_participants():
     assert model.use_cases[0].actor_ids == ["ACT-001", "ACT-002"]
 
 
+def _ambulance_requirements():
+    """The reported defect: a device actor owned half the diagram.
+
+    "Ambulance Vehicle" was linked to the dashboard, assign, and travel-time
+    goals even though it only appears in them as the thing being managed.
+    Its recorded responsibilities were the operator's own sentences, which
+    the vocabulary fallback then scored onto more goals.
+    """
+    return RequirementModel(
+        summary="Emergency ambulance dispatch.",
+        domain="Emergency Ambulance Dispatch System",
+        scale_profile="unknown",
+        functional_requirements=[
+            "Ambulance operators should have a dashboard to manage vehicles.",
+            "Ambulance operator assigns most suitable vehicle.",
+            "System calculates estimated travel time.",
+            "Ambulance operator notifies hospitals before arrival.",
+        ],
+        actors=[
+            Actor(
+                id="ACT-001", name="Ambulance Operator",
+                description="Coordinates dispatches.", actor_type="human",
+                responsibilities=["Manages vehicle availability"],
+            ),
+            Actor(
+                id="ACT-002", name="Hospital",
+                description="Receives arrival notifications.", actor_type="organizational",
+            ),
+            Actor(
+                id="ACT-003", name="Ambulance Vehicle",
+                description="Sends GPS and status updates continuously.",
+                actor_type="device",
+                responsibilities=[
+                    "Ambulance operators should have a dashboard to manage vehicles.",
+                    "Ambulance operator assigns most suitable vehicle.",
+                    "Ambulance operator calculates estimated arrival times.",
+                ],
+            ),
+        ],
+    )
+
+
+def test_device_mentioned_only_as_object_is_not_linked():
+    model = DiagramGenerator().use_case_only(_ambulance_requirements()).use_case_model
+    assert model is not None
+    by_requirement = {
+        use_case.requirement_id: set(use_case.actor_ids)
+        for use_case in model.use_cases
+    }
+    assert by_requirement["FR-001"] == {"ACT-001"}
+    assert by_requirement["FR-002"] == {"ACT-001"}
+    assert "ACT-003" not in by_requirement["FR-001"]
+    assert "ACT-003" not in by_requirement["FR-002"]
+    # The hospital being notified is a genuine secondary actor.
+    assert by_requirement["FR-004"] == {"ACT-001", "ACT-002"}
+
+
+def test_borrowed_responsibilities_do_not_score_the_device():
+    """FR-003 names no actor; the device must not win it on the strength of
+    responsibilities that are its operator's sentences."""
+    model = DiagramGenerator().use_case_only(_ambulance_requirements()).use_case_model
+    assert model is not None
+    by_requirement = {
+        use_case.requirement_id: set(use_case.actor_ids)
+        for use_case in model.use_cases
+    }
+    assert "ACT-003" not in by_requirement["FR-003"]
+
+
+def test_agent_phrase_links_the_actor():
+    requirements = RequirementModel(
+        summary="Slot coordination.",
+        domain="Operations Platform",
+        scale_profile="unknown",
+        functional_requirements=["Charging slots are reserved by drivers."],
+        actors=[
+            Actor(id="ACT-001", name="Driver", description="Reserves slots", actor_type="human"),
+        ],
+    )
+    model = DiagramGenerator().use_case_only(requirements).use_case_model
+    assert model is not None
+    assert model.use_cases[0].actor_ids == ["ACT-001"]
+
+
+def test_workflow_responsibilities_follow_ownership_not_mention():
+    """A workflow description becomes a responsibility only for the actor
+    named as its owner. Mere token overlap handed operator-owned goals to
+    the vehicle because both mention vehicles."""
+    from app.schemas.domain import DomainWorkflowHint
+    from app.services.project_signals import hydrate_project_signals
+
+    requirements = RequirementModel(
+        summary="Emergency ambulance dispatch.",
+        domain="Emergency Ambulance Dispatch System",
+        scale_profile="unknown",
+        functional_requirements=["Ambulance operator assigns most suitable vehicle."],
+        actors=[
+            Actor(
+                id="ACT-001", name="Ambulance Operator",
+                description="Coordinates dispatches.", actor_type="human",
+            ),
+            Actor(
+                id="ACT-002", name="Ambulance Vehicle",
+                description="Sends GPS updates.", actor_type="device",
+            ),
+        ],
+        domain_workflows=[
+            DomainWorkflowHint(
+                name="Assign Vehicle", description="Ambulance operator assigns most suitable vehicle.",
+                primary_actor="Ambulance Operator", related_entities=[],
+            ),
+            DomainWorkflowHint(
+                name="Locate Ambulances", description="System locates nearby ambulances.",
+                primary_actor="Needs clarification", related_entities=[],
+            ),
+        ],
+    )
+    hydrated = hydrate_project_signals(requirements, {})
+    by_name = {actor.name: actor for actor in hydrated.actors}
+    assert by_name["Ambulance Operator"].responsibilities == [
+        "Ambulance operator assigns most suitable vehicle."
+    ]
+    assert by_name["Ambulance Vehicle"].responsibilities == ["Sends GPS updates."]
+
+
 # ------------------------------------------------- upgrading an older project
 # Diagrams are persisted per workspace. A project created before the use case
 # diagram gained UML notation keeps serving its stored artifact, so the user

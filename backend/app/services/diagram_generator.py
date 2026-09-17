@@ -19,6 +19,7 @@ from app.schemas.domain import (
 )
 from app.services.domain_inference import (
     _ACCESS_MECHANISM_TERMS,
+    _ROLE_PATTERN,
     _normalize_role,
     extract_actors,
     tokenize,
@@ -918,12 +919,19 @@ class DiagramGenerator:
     def _class_diagram(self, database_design: DatabaseDesign) -> DiagramArtifact:
         selected_entities = self._diagram_entities(database_design)
         selected_names = {entity.name for entity in selected_entities}
+        node_ids = self._class_node_names(
+            [self._entity_alias(entity.name) for entity in selected_entities]
+        )
+        node_by_name = {
+            entity.name: node_id
+            for entity, node_id in zip(selected_entities, node_ids)
+        }
 
         mermaid_lines = ["classDiagram"]
         plantuml_lines = ["@startuml", "hide empty members"]
 
         for entity in selected_entities:
-            alias = self._entity_alias(entity.name)
+            alias = node_by_name[entity.name]
             mermaid_lines.append(f"class {alias} {{")
             plantuml_lines.append(f"class {alias} {{")
             for field in entity.fields[:CLASS_FIELD_LIMIT]:
@@ -944,8 +952,8 @@ class DiagramGenerator:
         for relation in database_design.relationships:
             if relation.source not in selected_names or relation.target not in selected_names:
                 continue
-            parent = self._entity_alias(relation.target)
-            child = self._entity_alias(relation.source)
+            parent = node_by_name[relation.target]
+            child = node_by_name[relation.source]
             parent_cardinality, child_cardinality = self._class_cardinality(
                 relation.relationship
             )
@@ -971,6 +979,12 @@ class DiagramGenerator:
         diagram_names = {
             entity.name: self._entity_diagram_name(entity.name) for entity in selected_entities
         }
+        # Mermaid alone chokes on reserved words in entity position; PlantUML
+        # accepts the bare name, so only the Mermaid identifiers are quoted.
+        mermaid_names = {
+            name: self._er_mermaid_name(diagram_name)
+            for name, diagram_name in diagram_names.items()
+        }
 
         # Which columns are foreign keys, taken from the recorded relationships
         # rather than guessed from a naming convention. `foreign_key` is stored
@@ -985,7 +999,7 @@ class DiagramGenerator:
         entity_blocks: list[str] = []
         hidden_fields = 0
         for entity in selected_entities:
-            entity_blocks.append(f"    {diagram_names[entity.name]} {{")
+            entity_blocks.append(f"    {mermaid_names[entity.name]} {{")
             shown = entity.fields[:ER_FIELD_LIMIT]
             hidden_fields += max(0, len(entity.fields) - len(shown))
             for field in shown:
@@ -1007,8 +1021,11 @@ class DiagramGenerator:
                     keys.append("FK")
                 key_slot = f" {','.join(keys)}" if keys else ""
                 comment = ' "nullable"' if field.nullable else ""
+                # Attribute names are bare words in this grammar: punctuation
+                # such as `;` ends the attribute and breaks the parse.
+                attribute_name = re.sub(r"[^A-Za-z0-9_]+", "_", field.name).strip("_") or "field"
                 entity_blocks.append(
-                    f"        {er_type(field.data_type)} {field.name}{key_slot}{comment}"
+                    f"        {er_type(field.data_type)} {attribute_name}{key_slot}{comment}"
                 )
             entity_blocks.append("    }")
 
@@ -1019,7 +1036,7 @@ class DiagramGenerator:
             parent_left, child_right = self._er_cardinality(relation.relationship)
             label = self._relationship_label(relation)
             relations.append(
-                f'    {diagram_names[relation.target]} {parent_left}--{child_right} {diagram_names[relation.source]} : "{label}"'
+                f'    {mermaid_names[relation.target]} {parent_left}--{child_right} {mermaid_names[relation.source]} : "{label}"'
             )
 
         plantuml_lines = ["@startuml", "!theme plain", "hide circle"]
@@ -1321,6 +1338,39 @@ class DiagramGenerator:
 
         return [(grouped[key][0], grouped[key][1]) for key in order]
 
+    def _subject_stems(self, requirement: str) -> set[str]:
+        """Stems of who performs the requirement: its subject plus agents.
+
+        The subject is the leading role phrase ("Ambulance operators should
+        ...", "Operators and admins review ..."), extended across compound
+        subjects joined by and/or/commas. A "by <actor>" phrase names the
+        agent of a passive clause ("slots are reserved by drivers").
+        Everything else in the sentence — objects, recipients, instruments —
+        is deliberately excluded.
+        """
+        text = re.sub(
+            r"^(?:support|enable|allow|provide)\s+",
+            "",
+            requirement.strip(),
+            flags=re.IGNORECASE,
+        )
+        stems: set[str] = set()
+        subject = _ROLE_PATTERN.match(text)
+        if subject:
+            end = subject.end()
+            while True:
+                continuation = re.match(r"\s*(?:and|or|,)\s*", text[end:])
+                if not continuation:
+                    break
+                following = _ROLE_PATTERN.match(text[end + continuation.end():])
+                if not following:
+                    break
+                end = end + continuation.end() + following.end()
+            stems |= self._stems(text[:end])
+        for agent in re.finditer(r"\bby\s+([a-z][a-z /-]*)", text, flags=re.IGNORECASE):
+            stems |= self._stems(agent.group(1))
+        return stems
+
     def _actors_for_use_case(
         self,
         requirements: RequirementModel,
@@ -1353,8 +1403,21 @@ class DiagramGenerator:
 
         # A requirement may legitimately name more than one external role.
         # Keep every explicit participant instead of forcing a single owner.
-        for index, (_, aliases) in enumerate(profiles):
-            if any(self._names_actor(requirement, alias) for alias in aliases):
+        # The mention must be in subject or agent position ("Operators ...
+        # review ...", "slots are reserved by drivers"): pure containment
+        # attached equipment to goals it never performs, which is how
+        # "manage vehicles" put a device on half the diagram. People and
+        # organizations named elsewhere stay candidate secondary actors (a
+        # hospital being notified participates); equipment named as the
+        # object of an action never does.
+        subject = self._subject_stems(requirement)
+        for index, (actor, aliases) in enumerate(profiles):
+            mentioned = [alias for alias in aliases if self._names_actor(requirement, alias)]
+            if not mentioned:
+                continue
+            if any(self._stems(alias) <= subject for alias in mentioned):
+                add(index)
+            elif (actor.actor_type or "human") not in {"device", "machine"}:
                 add(index)
         if matched:
             return matched
@@ -1366,7 +1429,21 @@ class DiagramGenerator:
             vocabulary: set[str] = set()
             for alias in aliases:
                 vocabulary |= self._stems(alias)
-            vocabulary |= self._stems(" ".join(actor.responsibilities))
+            # A responsibility sentence owned by someone else says nothing
+            # about this actor, even when it shares vocabulary: several of a
+            # device's recorded responsibilities were its operator's goals
+            # ("Ambulance operator calculates ..."), which scored the device
+            # onto use cases it never performs.
+            for responsibility in actor.responsibilities:
+                responsibility_subject = self._subject_stems(responsibility)
+                owned_by_other = any(
+                    other != index
+                    and self._stems(other_alias) <= responsibility_subject
+                    for other, (_, other_aliases) in enumerate(profiles)
+                    for other_alias in other_aliases
+                )
+                if not owned_by_other:
+                    vocabulary |= self._stems(responsibility)
             score = self._containment(requirement_tokens, vocabulary)
             weak = self._containment(
                 requirement_tokens, self._stems(actor.description)
@@ -1722,7 +1799,61 @@ class DiagramGenerator:
             singular = singular[:-3] + "y"
         elif singular.endswith("s") and not singular.endswith("ss"):
             singular = singular[:-1]
-        return "_".join(part.upper() for part in singular.split("_"))
+        name = "_".join(part.upper() for part in singular.split("_"))
+        return re.sub(r"[^A-Za-z0-9_]+", "_", name).strip("_") or "ENTITY"
+
+    # Words Mermaid reserves in erDiagram statement position, verified against
+    # the pinned Mermaid version: an entity named `class` draws `CLASS {`,
+    # which the parser reads as a style statement and rejects with a syntax
+    # error (this broke a real university project's ER diagram). Quoted
+    # identifiers parse and render as the bare name, so only colliding names
+    # are quoted.
+    _MERMAID_ER_RESERVED = frozenset({"CLASS", "CLASSDEF", "ONE"})
+
+    # classDiagram class names must be bare identifiers: parentheses, hashes
+    # and spaces in `class Order(priority)#1 {` are a lexical error, and so is
+    # a reserved word in the same position.
+    _MERMAID_CLASS_RESERVED = frozenset(
+        {"class", "interface", "abstract", "annotation", "enum", "note",
+         "namespace", "title", "direction"}
+    )
+    _CLASS_SAFE_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+    @classmethod
+    def _er_mermaid_name(cls, diagram_name: str) -> str:
+        name = diagram_name.strip()
+        if name.upper() in cls._MERMAID_ER_RESERVED:
+            return f'"{name}"'
+        return name
+
+    @classmethod
+    def _class_node_names(cls, aliases: list[str]) -> list[str]:
+        """Usable `class X {` identifiers, readable wherever possible.
+
+        Clean aliases pass through untouched; anything the lexer rejects
+        keeps its readability when stripping suffices (`Orderpriority1`) and
+        otherwise falls back to a positional id (`C3`), deduplicated.
+        """
+        used: set[str] = set()
+        names: list[str] = []
+        for index, alias in enumerate(aliases, start=1):
+            sanitized = re.sub(r"[^A-Za-z0-9_]", "", alias)
+            if (
+                sanitized
+                and cls._CLASS_SAFE_NAME.match(sanitized)
+                and sanitized.casefold() not in cls._MERMAID_CLASS_RESERVED
+                and sanitized not in used
+            ):
+                candidate = sanitized
+            else:
+                candidate = f"C{index}"
+                suffix = 2
+                while candidate in used:
+                    candidate = f"C{index}_{suffix}"
+                    suffix += 1
+            used.add(candidate)
+            names.append(candidate)
+        return names
 
     def _relationship_label(self, relation: DatabaseRelationship) -> str:
         """A label derived from the model, not from a list of known domains.

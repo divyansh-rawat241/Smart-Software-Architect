@@ -24,6 +24,7 @@ from app.schemas.domain import (
 from app.utils.identifiers import assign_missing_identifiers
 from app.services.decision_config import CONFIDENCE_THRESHOLDS, SCALE_THRESHOLDS
 from app.services.domain_inference import (
+    _CAPABILITY_VERBS,
     cluster_entities,
     extract_actors,
     parse_availability_percent,
@@ -255,6 +256,14 @@ def _semantic_entity_attributes(
         "through", "using", "use", "without", "must", "should", "can",
         "search", "make", "check", "receive", "track", "view", "book", "send",
         "create", "update", "approve", "assign", "schedule", "record",
+        # Action verbs and nominalizations that leak in after entity subjects
+        # ("customers browse ...", "order placement", "customers need ...").
+        "browse", "browses", "browsing", "browsed",
+        "place", "placing", "placed", "placement",
+        "need", "needing", "needed",
+        "require", "requires", "requiring", "required",
+        "want", "wants", "wanting", "wanted", "like",
+        "inconsistency", "inconsistent",
     }
     for sentence in re.split(r"[.;]", evidence_text):
         if not re.search(rf"\b{re.escape(entity_key)}(?:s|es)?\b", sentence, re.I):
@@ -267,6 +276,7 @@ def _semantic_entity_attributes(
             prop = singularize(match.group(1))
             if (
                 prop not in property_blocklist
+                and prop not in _CAPABILITY_VERBS
                 and prop not in {entity_key, "must", "can", "should"}
                 and len(prop) > 2
             ):
@@ -773,12 +783,19 @@ def hydrate_project_signals(
     assign_missing_identifiers(updated.domain_entities, "ENT")
 
     # Add source and useful role/entity metadata without overwriting manual detail.
+    # A workflow description becomes an actor's responsibility only when that
+    # actor owns the workflow: matching on any shared token attributed every
+    # sentence mentioning vehicles to the vehicle itself, so a device ended up
+    # "responsible" for goals performed by its operator.
+    unknown_owners = {"", "unknown", "needs clarification", "tbd", "n/a", "actor not yet identified"}
     for index, actor in enumerate(updated.actors, start=1):
-        actor_tokens = {token for token in tokenize(actor.name) if len(token) > 2}
+        actor_stems = {singularize(token) for token in tokenize(actor.name) if len(token) > 2}
         workflow_responsibilities = list(dict.fromkeys([
             workflow.description
             for workflow in updated.domain_workflows
-            if actor_tokens & set(tokenize(f"{workflow.primary_actor} {workflow.description}"))
+            if actor_stems
+            and workflow.primary_actor.strip().casefold() not in unknown_owners
+            and actor_stems <= {singularize(token) for token in tokenize(workflow.primary_actor)}
         ]))
         if workflow_responsibilities and (
             not actor.responsibilities or actor.responsibilities == [actor.description]

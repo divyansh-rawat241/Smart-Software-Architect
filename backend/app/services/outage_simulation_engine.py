@@ -1,9 +1,9 @@
-"""Deterministic blast-radius simulation for architecture component failures.
+"""Deterministic outage simulation for architecture component failures.
 
 Design rationale:
-  Blast radius is computed entirely from a component dependency graph combined
+  Outage impact is computed entirely from a component dependency graph combined
   with the architecture's fault_isolation score from the comparison matrix.
-  No LLM is involved in computing the blast radius — every propagation rule
+  No LLM is involved in computing the outage impact — every propagation rule
   is a hard-coded, auditable decision that mirrors real deployment topology
   semantics (shared process vs isolated service vs event-driven consumer).
 
@@ -26,7 +26,7 @@ from __future__ import annotations
 from app.schemas.domain import (
     ArchitectureComponent,
     ArchitectureOption,
-    BlastRadiusResult,
+    OutageSimulationResult,
     ComponentStatus,
     ResilienceRecommendation,
 )
@@ -236,7 +236,7 @@ def map_components_to_roles(architecture: ArchitectureOption) -> dict[str, str]:
 
     Returns a dict of component_name -> role. Unmatched components default
     to 'app_service' since most application-tier components behave like
-    generic services for blast-radius purposes.
+    generic services for outage-simulation purposes.
     """
     mapping: dict[str, str] = {}
     for component in architecture.components:
@@ -332,7 +332,7 @@ def simulate_failure(
     architecture: ArchitectureOption,
     failed_component: str,
     comparison_matrix: dict[str, dict[str, int]],
-) -> BlastRadiusResult:
+) -> OutageSimulationResult:
     """Simulate what happens when *failed_component* fails in *architecture*.
 
     Pure deterministic computation — no LLM, no network, no side effects.
@@ -399,7 +399,7 @@ def simulate_failure(
                 status=status,
                 reason=reason,
             ))
-        return BlastRadiusResult(
+        return OutageSimulationResult(
             failed_component=failed_component,
             architecture_id=architecture.id,
             statuses=statuses,
@@ -450,7 +450,7 @@ def simulate_failure(
     impact_summary = _build_impact_summary(failed_component, statuses)
     severity_score = _compute_severity(fault_isolation, statuses)
 
-    return BlastRadiusResult(
+    return OutageSimulationResult(
         failed_component=failed_component,
         architecture_id=architecture.id,
         statuses=statuses,
@@ -589,10 +589,10 @@ MITIGATION_CATALOG: list[dict] = [
 
 
 def suggest_mitigations(
-    blast_result: BlastRadiusResult,
+    outage_result: OutageSimulationResult,
     architecture: ArchitectureOption,
 ) -> list[ResilienceRecommendation]:
-    """Return deterministic mitigation suggestions for a blast radius result.
+    """Return deterministic mitigation suggestions for an outage simulation result.
 
     Selection logic:
       1. Map the failed component to its canonical role.
@@ -604,11 +604,11 @@ def suggest_mitigations(
       4. Cap at 5 recommendations to avoid overwhelming the user.
     """
     component_to_role = map_components_to_roles(architecture)
-    failed_role = component_to_role.get(blast_result.failed_component, "app_service")
+    failed_role = component_to_role.get(outage_result.failed_component, "app_service")
 
     # Index statuses by role for quick lookup
     role_to_statuses: dict[str, list[ComponentStatus]] = {}
-    for s in blast_result.statuses:
+    for s in outage_result.statuses:
         role_to_statuses.setdefault(s.role, []).append(s)
 
     recommendations: list[ResilienceRecommendation] = []
@@ -646,11 +646,11 @@ def suggest_mitigations(
 
 
 def apply_mitigations(
-    blast_result: BlastRadiusResult,
+    outage_result: OutageSimulationResult,
     selected_mitigation_ids: list[str],
     architecture: ArchitectureOption,
-) -> BlastRadiusResult:
-    """Apply selected mitigations and return a modified blast radius result.
+) -> OutageSimulationResult:
+    """Apply selected mitigations and return a modified outage simulation result.
 
     For each selected mitigation, iterate over its status_transformations.
     If a component with a matching role is currently "down", upgrade it to
@@ -673,7 +673,7 @@ def apply_mitigations(
             status=s.status,
             reason=s.reason,
         )
-        for s in blast_result.statuses
+        for s in outage_result.statuses
     ]
 
     for mid in selected_mitigation_ids:
@@ -701,14 +701,14 @@ def apply_mitigations(
         for mid in selected_mitigation_ids
         if mid in catalog_by_id
     )
-    new_severity = round(max(0.0, blast_result.severity_score - total_reduction), 1)
+    new_severity = round(max(0.0, outage_result.severity_score - total_reduction), 1)
 
     # Rebuild impact summary from updated statuses
-    new_impact_summary = _build_impact_summary(blast_result.failed_component, updated_statuses)
+    new_impact_summary = _build_impact_summary(outage_result.failed_component, updated_statuses)
 
-    return BlastRadiusResult(
-        failed_component=blast_result.failed_component,
-        architecture_id=blast_result.architecture_id,
+    return OutageSimulationResult(
+        failed_component=outage_result.failed_component,
+        architecture_id=outage_result.architecture_id,
         statuses=updated_statuses,
         impact_summary=new_impact_summary,
         severity_score=new_severity,

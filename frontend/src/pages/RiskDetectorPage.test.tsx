@@ -86,7 +86,7 @@ describe('RiskDetectorPage', () => {
     fireEvent.click(screen.getAllByRole('button', { name: /analyze architecture/i })[0])
     expect(await screen.findByText('Database failover is not explicitly represented')).toBeInTheDocument()
     expect(screen.getByText(/architecture changed since this analysis/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /view blast radius/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /simulate outage/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /view causal graph/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /ask ai assistant/i })).toBeInTheDocument()
     await waitFor(() => {

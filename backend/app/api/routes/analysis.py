@@ -1,5 +1,5 @@
 """Lightweight analysis endpoints for the What-If Playground, ADR export,
-and Blast Radius Simulator with resilience recommendations.
+and Simulate Outage with resilience recommendations.
 
 These endpoints are intentionally stateless and fast — they accept the
 full payload from the client and return computed results without any
@@ -18,14 +18,14 @@ from app.schemas.domain import (
     ArchitectureDecisionRecord,
     ArchitectureScorecard,
     ApplyMitigationsRequest,
-    BlastRadiusRequest,
-    BlastRadiusResult,
+    OutageSimulationRequest,
+    OutageSimulationResult,
     ExportAdrsRequest,
     ResilienceRecommendation,
     ResilienceRecommendationsRequest,
     ReweightRequest,
 )
-from app.services.blast_radius_engine import (
+from app.services.outage_simulation_engine import (
     apply_mitigations,
     simulate_failure,
     suggest_mitigations,
@@ -95,9 +95,9 @@ def _render_adr_markdown(adr: ArchitectureDecisionRecord) -> str:
     return "\n".join(lines)
 
 
-@router.post("/blast-radius", response_model=BlastRadiusResult)
-def blast_radius(payload: BlastRadiusRequest) -> BlastRadiusResult:
-    """Simulate a component failure and return the blast radius.
+@router.post("/simulate-outage", response_model=OutageSimulationResult)
+def simulate_outage(payload: OutageSimulationRequest) -> OutageSimulationResult:
+    """Simulate a component failure and return the outage impact.
 
     Pure deterministic computation — no LLM, no DB. The client sends
     the architecture definition, the failed component name, and the
@@ -113,30 +113,30 @@ def blast_radius(payload: BlastRadiusRequest) -> BlastRadiusResult:
 
 @router.post("/resilience-recommendations", response_model=list[ResilienceRecommendation])
 def resilience_recommendations(payload: ResilienceRecommendationsRequest) -> list[ResilienceRecommendation]:
-    """Return deterministic mitigation suggestions for a blast radius result.
+    """Return deterministic mitigation suggestions for an outage simulation result.
 
     Pure rule-based computation — no LLM. The client sends the completed
-    blast radius result and the architecture it was simulated against.
+    outage simulation result and the architecture it was simulated against.
     The server filters the MITIGATION_CATALOG to entries that would
-    meaningfully reduce the observed blast radius.
+    meaningfully reduce the observed outage impact.
     """
     return suggest_mitigations(
-        blast_result=payload.blast_result,
+        outage_result=payload.outage_result,
         architecture=payload.architecture,
     )
 
 
-@router.post("/blast-radius/apply-mitigations", response_model=BlastRadiusResult)
-def apply_mitigations_endpoint(payload: ApplyMitigationsRequest) -> BlastRadiusResult:
-    """Apply selected mitigations and return a modified blast radius result.
+@router.post("/simulate-outage/apply-mitigations", response_model=OutageSimulationResult)
+def apply_mitigations_endpoint(payload: ApplyMitigationsRequest) -> OutageSimulationResult:
+    """Apply selected mitigations and return a modified outage simulation result.
 
     Pure deterministic computation — no LLM. The client sends the original
-    blast radius result, a list of selected mitigation IDs, and the
+    outage simulation result, a list of selected mitigation IDs, and the
     architecture. The server applies status transformations and recomputes
     the severity score.
     """
     return apply_mitigations(
-        blast_result=payload.blast_result,
+        outage_result=payload.outage_result,
         selected_mitigation_ids=payload.selected_mitigation_ids,
         architecture=payload.architecture,
     )

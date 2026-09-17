@@ -4,8 +4,8 @@ import { AlertTriangle, Zap, RotateCcw, Shield, ArrowRight, ChevronDown, Chevron
 import { StatePanel } from '../components/workspace/StatePanel'
 import { useWorkspacesQuery } from '../hooks/useWorkspaces'
 import { getActiveWorkspace, getErrorMessage } from '../lib/utils'
-import { simulateBlastRadius, fetchResilienceRecommendations, applyMitigations } from '../lib/api'
-import type { BlastRadiusResult, ResilienceRecommendation } from '../types/api'
+import { simulateOutage, fetchResilienceRecommendations, applyMitigations } from '../lib/api'
+import type { OutageSimulationResult, ResilienceRecommendation } from '../types/api'
 
 const CATEGORY_COLORS: Record<string, string> = {
   isolation: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
@@ -13,14 +13,14 @@ const CATEGORY_COLORS: Record<string, string> = {
   resilience: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
 }
 
-export function BlastRadiusPage() {
+export function SimulateOutagePage() {
   const [searchParams] = useSearchParams()
   const workspaceQuery = useWorkspacesQuery()
   const workspace = getActiveWorkspace(workspaceQuery.data, searchParams.get('workspace'))
   const requestedComponent = searchParams.get('component')
   const handledComponent = useRef('')
 
-  const [result, setResult] = useState<BlastRadiusResult | null>(null)
+  const [result, setResult] = useState<OutageSimulationResult | null>(null)
   const [loadingComponent, setLoadingComponent] = useState<string | null>(null)
   const [rippleOrigin, setRippleOrigin] = useState<string | null>(null)
   const [comparisonResults, setComparisonResults] = useState<Record<string, number>>({})
@@ -28,7 +28,7 @@ export function BlastRadiusPage() {
   // Resilience recommendations state
   const [recommendations, setRecommendations] = useState<ResilienceRecommendation[]>([])
   const [selectedMitigations, setSelectedMitigations] = useState<Set<string>>(new Set())
-  const [modifiedResult, setModifiedResult] = useState<BlastRadiusResult | null>(null)
+  const [modifiedResult, setModifiedResult] = useState<OutageSimulationResult | null>(null)
   const [loadingRecommendations, setLoadingRecommendations] = useState(false)
   const [loadingApply, setLoadingApply] = useState(false)
   const [showBeforeAfter, setShowBeforeAfter] = useState(false)
@@ -64,18 +64,18 @@ export function BlastRadiusPage() {
     resetResilienceState()
 
     try {
-      const blastResult = await simulateBlastRadius({
+      const outageResult = await simulateOutage({
         architecture: recommended,
         failed_component: componentName,
         comparison_matrix: comparisonMatrix,
       })
-      setResult(blastResult)
+      setResult(outageResult)
       setRippleOrigin(componentName)
 
       // Fetch resilience recommendations (non-blocking)
       setLoadingRecommendations(true)
       fetchResilienceRecommendations({
-        blast_result: blastResult,
+        outage_result: outageResult,
         architecture: recommended,
       }).then(recs => {
         setRecommendations(recs)
@@ -92,7 +92,7 @@ export function BlastRadiusPage() {
                  rLower.includes(c.name.toLowerCase().split(' ')[0])
         })
         if (matchingComponent) {
-          simulateBlastRadius({
+          simulateOutage({
             architecture: arch,
             failed_component: matchingComponent.name,
             comparison_matrix: comparisonMatrix,
@@ -132,7 +132,7 @@ export function BlastRadiusPage() {
   }, [handleComponentClick, recommended, requestedComponent, workspace])
 
   // A simulation is a snapshot of one architecture revision: clear it as soon
-  // as the workspace regenerates so a stale blast radius is never shown.
+  // as the workspace regenerates so a stale outage simulation is never shown.
   useEffect(() => {
     resetAll()
   }, [workspace?.id, workspace?.updated_at, resetAll])
@@ -158,7 +158,7 @@ export function BlastRadiusPage() {
     setLoadingApply(true)
     try {
       const modified = await applyMitigations({
-        blast_result: result,
+        outage_result: result,
         selected_mitigation_ids: Array.from(selectedMitigations),
         architecture: recommended,
       })
@@ -185,7 +185,7 @@ export function BlastRadiusPage() {
   }, [rippleOrigin])
 
   if (workspaceQuery.isLoading) {
-    return <StatePanel badge="Loading" title="Loading blast radius" description="Preparing the simulator." />
+    return <StatePanel badge="Loading" title="Loading outage simulation" description="Preparing the simulator." />
   }
 
   if (workspaceQuery.isError) {
@@ -206,7 +206,7 @@ export function BlastRadiusPage() {
     )
   }
 
-  const getStatusStyle = (componentName: string, overrideResult?: BlastRadiusResult | null) => {
+  const getStatusStyle = (componentName: string, overrideResult?: OutageSimulationResult | null) => {
     const r = overrideResult ?? result
     if (!r) return 'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-amber-400 dark:hover:border-amber-500 cursor-pointer'
 
@@ -223,7 +223,7 @@ export function BlastRadiusPage() {
     return 'border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/20'
   }
 
-  const getStatusIcon = (componentName: string, overrideResult?: BlastRadiusResult | null) => {
+  const getStatusIcon = (componentName: string, overrideResult?: OutageSimulationResult | null) => {
     const r = overrideResult ?? result
     if (!r) return null
     if (componentName === r.failed_component) {
@@ -241,7 +241,7 @@ export function BlastRadiusPage() {
     return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
   }
 
-  const renderComponentGrid = (overrideResult: BlastRadiusResult | null, label?: string) => (
+  const renderComponentGrid = (overrideResult: OutageSimulationResult | null, label?: string) => (
     <div className="panel">
       {label && <h3 className="text-sm font-semibold mb-3">{label}</h3>}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
@@ -287,7 +287,7 @@ export function BlastRadiusPage() {
       <div className="panel">
         <div className="flex items-center gap-2">
           <Zap className="h-5 w-5" style={{ color: 'var(--brand)' }} />
-          <h2 className="text-lg font-semibold">Blast Radius Simulator</h2>
+          <h2 className="text-lg font-semibold">Simulate Outage</h2>
         </div>
         <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
           Click any component in <strong>{recommended.name}</strong> to simulate a failure and see
@@ -310,7 +310,7 @@ export function BlastRadiusPage() {
                 type="button"
                 onClick={() => { if (isClickable && !isLoading) void handleComponentClick(component.name) }}
                 disabled={isLoading}
-                className={`relative rounded-lg p-3 text-left transition-all duration-200 ${getStatusStyle(component.name)} ${isLoading ? 'animate-pulse' : ''} ${isClickable && !isLoading && !hasResult ? 'hover:shadow-md' : ''} ${rippleOrigin === component.name ? 'blast-ripple' : ''}`}
+                className={`relative rounded-lg p-3 text-left transition-all duration-200 ${getStatusStyle(component.name)} ${isLoading ? 'animate-pulse' : ''} ${isClickable && !isLoading && !hasResult ? 'hover:shadow-md' : ''} ${rippleOrigin === component.name ? 'outage-ripple' : ''}`}
               >
                 <div className="flex items-start gap-2">
                   {getStatusIcon(component.name)}
@@ -574,7 +574,7 @@ export function BlastRadiusPage() {
           <div className="text-center py-8">
             <Zap className="h-8 w-8 mx-auto mb-3" style={{ color: 'var(--text-muted)' }} />
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Click a component above to simulate a failure and see the blast radius.
+              Click a component above to simulate a failure and see the outage impact.
             </p>
           </div>
         </div>

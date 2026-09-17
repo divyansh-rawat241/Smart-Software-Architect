@@ -59,9 +59,11 @@ CONCEPTS: dict[str, tuple[str, str]] = {
         "A functional requirement states an observable capability: who can do what to "
         "which business object.",
     ),
-    "blast_radius": (
-        r"\bwhat (?:is|does) (?:the )?blast[- ]radius\b|\bblast radius mean\b",
-        "Blast radius is how far a single failure spreads. The analysis takes one "
+    "outage_simulation": (
+        r"\bwhat (?:is|does) (?:an? )?(?:outage simulation|simulate outage|simulated outage)\b|"
+        r"\bwhat (?:is|does) (?:the )?blast[- ]radius\b|\bblast radius mean\b|"
+        r"\boutage simulation mean\b",
+        "An outage simulation shows how far a single failure spreads. The analysis takes one "
         "component out and reports which other components go down, which degrade and "
         "which are unaffected, then scores the severity.",
     ),
@@ -279,7 +281,7 @@ class AnalysisEngine:
             answer=(
                 f"{verdict} {replica_note} "
                 + (f"Next most depended on: {others}. " if others else "")
-                + "Recommendation: run the blast-radius simulation on it to see exactly what "
+                + "Recommendation: run the outage simulation on it to see exactly what "
                 "degrades, then decide whether redundancy is worth the operational cost."
             ),
             components=[name],
@@ -373,7 +375,7 @@ class AnalysisEngine:
                     components=[name],
                     recommendation=(
                         "Review isolation, replication and failover for the shared dependency, "
-                        "then re-run the blast-radius simulation."
+                        "then re-run the outage simulation."
                     ),
                 )
             )
@@ -962,9 +964,9 @@ class AnalysisEngine:
                 if workspace.adrs
                 else "This project has no decisions recorded yet."
             )
-        if key == "blast_radius":
+        if key == "outage_simulation":
             return (
-                "You can run it from the Blast radius view, or ask me "
+                "You can run it from the Simulate Outage view, or ask me "
                 "'where is the single point of failure'."
             )
         return ""

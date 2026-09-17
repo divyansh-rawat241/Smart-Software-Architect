@@ -72,8 +72,9 @@ export function ArchitectureStudioPage() {
 
   function openComponentEdit(operation: 'add' | 'update' | 'delete', component?: ArchitectureComponent, index?: number) {
     if (!selected) return
+    const subject = component?.name ? ` ${component.name}` : ''
     setComponentEdit({
-      title: `${operation === 'add' ? 'Add' : operation === 'delete' ? 'Delete' : 'Edit'} architecture component`,
+      title: `${operation === 'add' ? 'Add architecture component' : operation === 'delete' ? `Delete${subject}` : `Edit${subject}`}`,
       edit: {
         target_type: 'architecture_component',
         operation,
